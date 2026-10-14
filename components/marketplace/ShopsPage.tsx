@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
 import { useEffect, useMemo, useState } from "react";
 import { getShopDirectoryData, type MarketplaceProduct, type MarketplaceShop } from "@/lib/supabase/api";
 
@@ -147,20 +148,13 @@ export function ShopsPage() {
 
   return (
     <div className="shops-page">
-      <header className="shops-top">
-        <Link className="shops-brand" href="/">
-          <span className="shops-logo">O₂</span>
-          <span>
-            O2N <em>E-Mall</em>
-            <small>SHOP LOCAL. DISCOVER MORE.</small>
-          </span>
-        </Link>
+      <MarketplaceHeader>
         <nav className="shops-nav" aria-label="Shop directory navigation">
           <Link className="shop-btn" href="/">Home</Link>
           <Link className="shop-btn" href="/#seller">Seller Centre</Link>
           <Link className="shop-btn shop-btn-primary" href="/#seller">List your shop ↗</Link>
         </nav>
-      </header>
+      </MarketplaceHeader>
 
       <main className="shops-main">
         <section className="shops-hero">

@@ -1,57 +1,253 @@
 import type { MarketplaceProduct, MarketplaceShop } from "@/lib/supabase/api";
+import { searchMarketplace, type MarketplaceSearchSuggestion } from "@/lib/supabase/api";
 import Link from "next/link";
+import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { setAuthUser } from "@/lib/store/authSlice";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
+
+const subscribeToNothing = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+function AccountControl() {
+  const isClient = useSyncExternalStore(subscribeToNothing, getClientSnapshot, getServerSnapshot);
+  const user = useAppSelector((state) => state.auth.user);
+  const initialized = useAppSelector((state) => state.auth.initialized);
+  const dispatch = useAppDispatch();
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isClient || !initialized) {
+    return (
+      <span className="account-avatar" aria-label="Loading account">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+          <path d="M4.5 20c.7-3.3 3.5-5.5 7.5-5.5s6.8 2.2 7.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (!user) {
+    return <Link className="btn secondary" href="/auth/login">Sign in</Link>;
+  }
+
+  const signOut = async () => {
+    if (!supabase || !isSupabaseConfigured) return;
+
+    setIsSigningOut(true);
+    setError(null);
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) {
+      setError("Could not sign out. Please try again.");
+    } else {
+      dispatch(setAuthUser(null));
+    }
+    setIsSigningOut(false);
+  };
+
+  return (
+    <details className="account-control">
+      <summary className="account-avatar" aria-label={`Account: ${user.displayName ?? user.email ?? "User"}`}>
+        {user.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.avatarUrl} alt="" />
+        ) : (
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M4.5 20c.7-3.3 3.5-5.5 7.5-5.5s6.8 2.2 7.5 5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        )}
+      </summary>
+      <div className="account-menu">
+        <strong>{user.displayName ?? "Your account"}</strong>
+        {user.email ? <span>{user.email}</span> : null}
+        {error ? <p className="account-menu-error" role="alert">{error}</p> : null}
+        <button type="button" disabled={isSigningOut} onClick={signOut}>
+          {isSigningOut ? "Signing out…" : "Sign out"}
+        </button>
+      </div>
+    </details>
+  );
+}
 
 export function HeaderSection({
   bagCount,
   search,
   onSearchChange,
   onOpenBag,
-  onOpenSeller,
-  onAuth,
-  isAuthenticated,
 }: {
   bagCount: number;
   search: string;
   onSearchChange: (value: string) => void;
   onOpenBag: () => void;
-  onOpenSeller: () => void;
-  onAuth: () => void;
-  isAuthenticated: boolean;
 }) {
-  return (
-    <header className="nav">
-      <div className="wrap navin">
-        <div className="brand">
-          <span className="logo">O₂</span>
-          <span>
-            O2N <span style={{ color: "#6555e8" }}>E-Mall</span>
-            <small>SHOP LOCAL. DISCOVER MORE.</small>
-          </span>
-        </div>
+  const router = useRouter();
+  const searchRef = useRef<HTMLDivElement>(null);
+  const [suggestions, setSuggestions] = useState<MarketplaceSearchSuggestion[]>([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const [resultsQuery, setResultsQuery] = useState("");
+  const query = search.trim();
+  const showSuggestions = isSearchFocused && query.length >= 2;
+  const visibleSuggestions = resultsQuery === query ? suggestions : [];
 
+  useEffect(() => {
+    if (query.length < 2) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+      try {
+        const results = await searchMarketplace(query);
+        if (!cancelled) {
+          setSuggestions(results);
+          setResultsQuery(query);
+          setActiveSuggestion(-1);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setSuggestions([]);
+          setResultsQuery(query);
+          setSearchError(error instanceof Error ? error.message : "Search could not be completed.");
+        }
+      } finally {
+        if (!cancelled) setIsSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    const closeWhenOutside = (event: PointerEvent) => {
+      if (!searchRef.current?.contains(event.target as Node)) {
+        setIsSearchFocused(false);
+        setActiveSuggestion(-1);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeWhenOutside);
+    return () => document.removeEventListener("pointerdown", closeWhenOutside);
+  }, []);
+
+  const selectSuggestion = (suggestion: MarketplaceSearchSuggestion) => {
+    setIsSearchFocused(false);
+    router.push(suggestion.href);
+  };
+
+  return (
+    <MarketplaceHeader>
+      <div className="marketplace-search" ref={searchRef}>
         <label className="search">
-          ⌕
+          <span aria-hidden="true">⌕</span>
           <input
-            aria-label="Search products"
+            type="search"
+            role="combobox"
+            aria-label="Search products, shops, and categories"
+            aria-autocomplete="list"
+            aria-expanded={showSuggestions}
+            aria-controls="marketplace-search-results"
+            aria-activedescendant={activeSuggestion >= 0 ? `marketplace-search-result-${activeSuggestion}` : undefined}
             placeholder="Search products, shops, categories…"
             value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onChange={(event) => {
+            const value = event.target.value;
+            onSearchChange(value);
+            setIsSearchFocused(true);
+            setSuggestions([]);
+            setResultsQuery("");
+            setSearchError(null);
+            setIsSearching(value.trim().length >= 2);
+            setActiveSuggestion(-1);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                setIsSearchFocused(false);
+                setActiveSuggestion(-1);
+              } else if (event.key === "ArrowDown" && visibleSuggestions.length) {
+                event.preventDefault();
+                setActiveSuggestion((current) => (current + 1) % visibleSuggestions.length);
+              } else if (event.key === "ArrowUp" && visibleSuggestions.length) {
+                event.preventDefault();
+                setActiveSuggestion((current) => (current <= 0 ? visibleSuggestions.length - 1 : current - 1));
+              } else if (event.key === "Enter" && visibleSuggestions.length) {
+                event.preventDefault();
+                selectSuggestion(visibleSuggestions[activeSuggestion] ?? visibleSuggestions[0]);
+              }
+            }}
           />
         </label>
 
-        <div className="actions">
-          <button type="button" className="btn secondary" onClick={onAuth}>
-            {isAuthenticated ? "Account / sign out" : "Sign in"}
-          </button>
-          <button type="button" className="btn secondary" onClick={onOpenSeller}>
-            Sell on O2N
-          </button>
-          <button type="button" className="btn primary" onClick={onOpenBag}>
-            Bag <span id="bagCount">{bagCount}</span>
-          </button>
-        </div>
+        {showSuggestions ? (
+          <div className="marketplace-search-dropdown">
+            {isSearching ? <p className="marketplace-search-state">Searching…</p> : null}
+            {!isSearching && searchError ? <p className="marketplace-search-state error">{searchError}</p> : null}
+            {!isSearching && !searchError && visibleSuggestions.length === 0 ? (
+              <p className="marketplace-search-state">No matching products, shops, or categories.</p>
+            ) : null}
+            {!isSearching && visibleSuggestions.length ? (
+              <ul id="marketplace-search-results" className="marketplace-search-results" role="listbox" aria-label="Search suggestions">
+                {visibleSuggestions.map((suggestion, index) => (
+                  <li key={`${suggestion.type}-${suggestion.id}`} role="option" aria-selected={activeSuggestion === index}>
+                    <Link
+                      id={`marketplace-search-result-${index}`}
+                      href={suggestion.href}
+                      className={`marketplace-search-result ${activeSuggestion === index ? "active" : ""}`}
+                      onClick={() => setIsSearchFocused(false)}
+                    >
+                      {suggestion.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={suggestion.imageUrl} alt="" />
+                      ) : (
+                        <span className={`marketplace-search-result-icon ${suggestion.type}`}>
+                          {suggestion.type === "shop" ? "🏬" : suggestion.type === "category" ? "▦" : "🛍️"}
+                        </span>
+                      )}
+                      <span className="marketplace-search-result-copy">
+                        <span className="marketplace-search-result-title">{suggestion.title}</span>
+                        <span className="marketplace-search-result-subtitle">
+                          {suggestion.type === "product" ? "in " : ""}
+                          {suggestion.subtitle}
+                        </span>
+                      </span>
+                      <span className="marketplace-search-result-type">{suggestion.type}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-    </header>
+
+      <div className="actions">
+        <AccountControl />
+        <button
+          type="button"
+          className="btn primary cart-button"
+          onClick={onOpenBag}
+          aria-label={`Open cart, ${bagCount} ${bagCount === 1 ? "item" : "items"}`}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 1.9-1.4L22 8H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="10" cy="20" r="1.5" fill="currentColor" />
+            <circle cx="18" cy="20" r="1.5" fill="currentColor" />
+          </svg>
+          <span id="bagCount" className="cart-count">{bagCount}</span>
+        </button>
+      </div>
+    </MarketplaceHeader>
   );
 }
 
@@ -91,15 +287,59 @@ export function HeroSection({ onOpenSeller }: { onOpenSeller: () => void }) {
   );
 }
 
+export function PromoHighlightsSection({ onOpenSeller }: { onOpenSeller: () => void }) {
+  const scrollToProducts = () => {
+    document.getElementById("products")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  return (
+    <section className="o2n-promo-area" aria-label="Shop and offers">
+      <div className="o2n-promo-grid">
+        <button type="button" className="o2n-promo-card o2n-promo-deals" onClick={scrollToProducts}>
+          <span className="o2n-promo-kicker">SMART SHOPPING</span>
+          <span className="o2n-promo-emoji" aria-hidden="true">🏷️</span>
+          <h2>Great finds.<br />Local prices.</h2>
+          <p>Explore products and compare prices from approved sellers.</p>
+          <span className="o2n-promo-cta">Explore products <b>→</b></span>
+        </button>
+
+        <Link className="o2n-promo-card o2n-promo-shops" href="/shops">
+          <span className="o2n-promo-kicker">AROUND YOUR NEIGHBOURHOOD</span>
+          <span className="o2n-promo-emoji" aria-hidden="true">🏬</span>
+          <h2>Your next favourite shop is closer.</h2>
+          <p>Discover local businesses and browse their storefronts.</p>
+          <span className="o2n-promo-cta">Discover all shops <b>→</b></span>
+        </Link>
+
+        <button type="button" className="o2n-promo-card o2n-promo-seller" onClick={onOpenSeller}>
+          <span className="o2n-promo-kicker">FOR LOCAL BUSINESSES</span>
+          <span className="o2n-promo-emoji" aria-hidden="true">🚀</span>
+          <h2>Bring your shop online.</h2>
+          <p>Apply to sell on O2N. First 3 months free on seller subscriptions.</p>
+          <span className="o2n-promo-cta">List your shop <b>↗</b></span>
+        </button>
+      </div>
+
+      <div className="o2n-offer-ribbon">
+        <span className="o2n-offer-icon" aria-hidden="true">✨</span>
+        <div>
+          <strong>Discover more. Support local.</strong>
+          <small>New finds from approved sellers, all in one place.</small>
+        </div>
+        <Link href="/categories">Browse categories <b>→</b></Link>
+      </div>
+    </section>
+  );
+}
+
 export function CategorySection({
-  categories,
   selectedCategory,
   onSelect,
 }: {
-  categories: string[];
   selectedCategory: string;
   onSelect: (value: string) => void;
 }) {
+  const categories = ["All", "Fashion", "Groceries", "Electronics", "Home", "Beauty"];
   const categoryIcons: Record<string, string> = {
     All: "✦",
     Fashion: "👕",
@@ -117,9 +357,9 @@ export function CategorySection({
           <h2>Explore by category</h2>
           <p>Choose a category to narrow your search.</p>
         </div>
-        <button type="button" className="link" onClick={() => onSelect("All")}>
+        <Link className="link" href="/categories">
           View all ↗
-        </button>
+        </Link>
       </div>
 
       <div className="cats">
@@ -150,6 +390,28 @@ export function CategorySection({
   );
 }
 
+const categoryAliases: Record<string, string[]> = {
+  Fashion: ["fashion", "clothing & fashion", "footwear", "ethnic wear", "kids’ clothing", "men’s clothing", "women’s clothing"],
+  Groceries: ["groceries", "grocery", "grocery & food", "food", "dairy & bakery", "fresh produce", "snacks & beverages", "staples & pulses"],
+  Electronics: ["electronics", "electronics & mobile", "mobile", "audio & headphones", "computers & laptops", "mobile accessories", "mobile phones"],
+  Home: ["home", "home & kitchen", "home & living", "bedding & bath", "furniture", "home decor", "kitchen essentials"],
+  Beauty: ["beauty", "beauty & personal care", "personal care", "haircare", "makeup", "personal hygiene", "skincare"],
+};
+
+function matchesSearchText(value: string | null | undefined, query: string) {
+  return value?.toLowerCase().includes(query) ?? false;
+}
+
+function matchesCategorySearch(category: string | undefined, query: string) {
+  if (!category) return false;
+  const normalizedCategory = category.trim().toLowerCase();
+  if (normalizedCategory.includes(query)) return true;
+
+  return Object.values(categoryAliases).some((aliases) =>
+    aliases.some((alias) => alias.includes(query) && normalizedCategory.includes(alias))
+  );
+}
+
 export function ProductSection({
   products,
   onAddToBag,
@@ -159,6 +421,7 @@ export function ProductSection({
   sort,
   onCategoryChange,
   onSortChange,
+  heading,
 }: {
   products: MarketplaceProduct[];
   onAddToBag: (productId: string) => void;
@@ -168,15 +431,21 @@ export function ProductSection({
   sort: string;
   onCategoryChange: (value: string) => void;
   onSortChange: (value: string) => void;
+  heading?: string;
 }) {
   const visibleProducts = products.filter((product) => {
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+    const productCategory = product.category?.trim().toLowerCase() ?? "";
+    const matchesCategory =
+      selectedCategory === "All" ||
+      product.category === selectedCategory ||
+      (categoryAliases[selectedCategory]?.includes(productCategory) ?? false);
     const query = search.trim().toLowerCase();
     const matchesSearch =
       query.length === 0 ||
-      `${product.title} ${product.description ?? ""} ${product.shopName ?? ""} ${product.category ?? ""}`
-        .toLowerCase()
-        .includes(query);
+      matchesSearchText(product.title, query) ||
+      matchesSearchText(product.description, query) ||
+      matchesSearchText(product.shopName, query) ||
+      matchesCategorySearch(product.category, query);
 
     return matchesCategory && matchesSearch;
   });
@@ -188,11 +457,11 @@ export function ProductSection({
   });
 
   return (
-    <section className="section">
+    <section className="section" id="products">
       <div className="head">
         <div>
           <h2 id="listTitle">
-            {search ? "Search results" : selectedCategory === "All" ? "Products from real sellers" : `${selectedCategory} listings`}
+            {heading ?? (search ? "Search results" : selectedCategory === "All" ? "Products from real sellers" : `${selectedCategory} listings`)}
           </h2>
           <p>Only approved listings appear here.</p>
         </div>
@@ -264,7 +533,36 @@ export function ProductSection({
   );
 }
 
-export function ShopSection({ shops, onOpenSeller }: { shops: MarketplaceShop[]; onOpenSeller: () => void }) {
+export function ShopSection({
+  shops,
+  products,
+  search,
+  onOpenSeller,
+}: {
+  shops: MarketplaceShop[];
+  products: MarketplaceProduct[];
+  search: string;
+  onOpenSeller: () => void;
+}) {
+  const query = search.trim().toLowerCase();
+  const visibleShops = shops.filter((shop) => {
+    if (!query) return true;
+    const shopProducts = products.filter((product) => product.shop_id === shop.id);
+    return (
+      matchesSearchText(shop.name, query) ||
+      matchesSearchText(shop.description, query) ||
+      matchesSearchText(shop.district, query) ||
+      matchesSearchText(shop.state, query) ||
+      shopProducts.some(
+        (product) =>
+          matchesSearchText(product.title, query) ||
+          matchesSearchText(product.description, query) ||
+          matchesCategorySearch(product.category, query)
+      )
+    );
+  });
+  const displayedShops = query ? visibleShops : visibleShops.slice(0, 4);
+
   return (
     <section className="section">
       <div className="head">
@@ -283,8 +581,8 @@ export function ShopSection({ shops, onOpenSeller }: { shops: MarketplaceShop[];
       </div>
 
       <div className="shops">
-        {shops.length ? (
-          shops.map((shop) => (
+        {displayedShops.length ? (
+          displayedShops.map((shop) => (
             <article key={shop.id} className="shop">
               <span className="emoji">🏬</span>
               <h3>{shop.name}</h3>
@@ -293,8 +591,8 @@ export function ShopSection({ shops, onOpenSeller }: { shops: MarketplaceShop[];
           ))
         ) : (
           <div className="empty">
-            <h3>Shops are joining O2N</h3>
-            <p>Approved shops will appear here.</p>
+            <h3>{query ? "No matching shops" : "Shops are joining O2N"}</h3>
+            <p>{query ? "Try another shop name, product, or category." : "Approved shops will appear here."}</p>
           </div>
         )}
       </div>
@@ -374,12 +672,7 @@ export function FooterSection() {
       </div>
 
       <div className="admin-access" style={{ padding: "14px 0", borderTop: "1px solid #ffffff35", marginTop: 18, display: "flex", gap: 14, flexWrap: "wrap" }}>
-        <a href="https://o2n-enterprises-exaju15ds-o2n.vercel.app/admin.html" style={{ color: "#e6e3ff", fontWeight: 800, textDecoration: "underline" }}>
-          Administrator Login
-        </a>
-        <a href="https://o2n-enterprises-6fd4jesfj-o2n.vercel.app/super-admin.html" style={{ color: "#ffd69d", fontWeight: 800, textDecoration: "underline" }}>
-          Super Admin Control Centre
-        </a>
+        
       </div>
     </footer>
   );

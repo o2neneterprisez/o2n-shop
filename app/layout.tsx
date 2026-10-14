@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
+import { StoreProvider } from "@/components/store/StoreProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +25,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Suspense
+          fallback={
+            <div className="store-provider-loading" aria-busy="true">
+              <span>Loading O2N E-Mall…</span>
+            </div>
+          }
+        >
+          <StoreProvider>{children}</StoreProvider>
+        </Suspense>
+      </body>
     </html>
   );
 }

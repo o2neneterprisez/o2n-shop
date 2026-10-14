@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addBagItem, removeBagItem } from "@/lib/marketplace/cart";
 import { useBagItems } from "@/lib/marketplace/useBagItems";
+import { useAppDispatch } from "@/lib/store/hooks";
 import { getMarketplaceData, type MarketplaceProduct, type MarketplaceShop } from "@/lib/supabase/api";
 import {
   CategorySection,
@@ -12,6 +13,7 @@ import {
   HeroSection,
   HowItWorksSection,
   NoticeSection,
+  PromoHighlightsSection,
   ProductSection,
   SellerCTASection,
   ShopSection,
@@ -19,23 +21,21 @@ import {
 
 export function MarketplacePage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [shops, setShops] = useState<MarketplaceShop[]>([]);
-  const [categories, setCategories] = useState<string[]>(["All"]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("new");
   const bagItems = useBagItems();
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [isBagOpen, setIsBagOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
       const data = await getMarketplaceData();
       setProducts(data.products);
       setShops(data.shops);
-      setCategories(Array.isArray(data.categories) ? (data.categories as string[]) : ["All"]);
     };
 
     loadData();
@@ -57,12 +57,12 @@ export function MarketplacePage() {
   const bagTotal = bagProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
 
   const addToBag = (productId: string) => {
-    addBagItem(productId);
+    dispatch(addBagItem(productId));
     setIsBagOpen(true);
   };
 
   const removeFromBag = (productId: string) => {
-    removeBagItem(productId);
+    dispatch(removeBagItem(productId));
   };
 
   return (
@@ -71,18 +71,19 @@ export function MarketplacePage() {
       <HeaderSection
         bagCount={bagCount}
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setSelectedCategory("All");
+        }}
         onOpenBag={() => setIsBagOpen(true)}
-        onOpenSeller={() => setIsSellerModalOpen(true)}
-        onAuth={() => setIsAuthenticated((value) => !value)}
-        isAuthenticated={isAuthenticated}
       />
 
       <main className="page-shell">
         <HeroSection onOpenSeller={() => setIsSellerModalOpen(true)} />
 
+        <PromoHighlightsSection onOpenSeller={() => setIsSellerModalOpen(true)} />
+
         <CategorySection
-          categories={categories}
           selectedCategory={selectedCategory}
           onSelect={(value) => setSelectedCategory(value)}
         />
@@ -98,7 +99,7 @@ export function MarketplacePage() {
           onAddToBag={addToBag}
         />
 
-        <ShopSection shops={shops.slice(0, 4)} onOpenSeller={() => setIsSellerModalOpen(true)} />
+        <ShopSection shops={shops} products={products} search={search} onOpenSeller={() => setIsSellerModalOpen(true)} />
         <HowItWorksSection />
         <SellerCTASection onOpenSeller={() => setIsSellerModalOpen(true)} />
       </main>

@@ -1,8 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { getServerBagItemsSnapshot, readBagItems, subscribeToBagItems } from "./cart";
+import { useAppSelector } from "@/lib/store/hooks";
 
 export function useBagItems() {
-  return useSyncExternalStore(subscribeToBagItems, readBagItems, getServerBagItemsSnapshot);
+  return useAppSelector((state) => state.cart.items);
 }
