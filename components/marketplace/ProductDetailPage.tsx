@@ -70,10 +70,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
   if (!product) {
     return (
       <main className="productdetail-page">
-        <MarketplaceHeader>
-          <strong className="product-header-title">{isLoaded ? "Product unavailable" : "Loading product…"}</strong>
-          <Link href="/" className="category-back">← Products</Link>
-        </MarketplaceHeader>
+        <MarketplaceHeader />
         {isLoaded ? (
           <div className="detail-empty">
             <h1>Product unavailable</h1>
@@ -87,10 +84,7 @@ export function ProductDetailPage({ productId }: { productId: string }) {
 
   return (
     <main className="productdetail-page">
-      <MarketplaceHeader>
-        <strong className="product-header-title">{product.title}</strong>
-        <Link href="/" className="category-back">← Products</Link>
-      </MarketplaceHeader>
+      <MarketplaceHeader />
 
       <div className="detailwrap">
         <section className="detailpanel" aria-label="Product images">

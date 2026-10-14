@@ -148,13 +148,7 @@ export function ShopsPage() {
 
   return (
     <div className="shops-page">
-      <MarketplaceHeader>
-        <nav className="shops-nav" aria-label="Shop directory navigation">
-          <Link className="shop-btn" href="/">Home</Link>
-          <Link className="shop-btn" href="/#seller">Seller Centre</Link>
-          <Link className="shop-btn shop-btn-primary" href="/#seller">List your shop ↗</Link>
-        </nav>
-      </MarketplaceHeader>
+      <MarketplaceHeader />
 
       <main className="shops-main">
         <section className="shops-hero">

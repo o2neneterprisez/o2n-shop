@@ -797,6 +797,85 @@ img {
   gap: 13px;
 }
 
+.shop-showcase {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.shop-showcase-card {
+  display: flex;
+  min-width: 0;
+  min-height: 116px;
+  align-items: center;
+  gap: 15px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.shop-showcase-card:hover {
+  transform: translateY(-2px);
+  border-color: #b9b1ff;
+}
+
+.shop-showcase-logo {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #efedff;
+  color: var(--purple);
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.shop-showcase-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-showcase-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.shop-showcase-copy strong,
+.shop-showcase-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-showcase-copy strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.shop-showcase-copy small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.shop-showcase-arrow {
+  margin-left: auto;
+  color: var(--purple);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.shop-showcase-empty {
+  grid-column: 1 / -1;
+}
+
 .shop {
   background: white;
   border: 1px solid var(--line);
@@ -1592,10 +1671,16 @@ img {
 
 @media (max-width: 800px) {
   .navin {
-    gap: 12px;
+    gap: 8px;
     flex-wrap: wrap;
     padding-top: 12px;
     padding-bottom: 12px;
+  }
+
+  .marketplace-brand {
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 7px;
   }
 
   .search {
@@ -1611,6 +1696,7 @@ img {
   }
 
   .actions {
+    flex: 0 0 auto;
     gap: 4px;
   }
 
@@ -1634,6 +1720,10 @@ img {
   .shops,
   .how {
     grid-template-columns: 1fr;
+  }
+
+  .shop-showcase {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .seller {
@@ -1725,13 +1815,67 @@ img {
     font-size: 14px;
   }
 
+  .shop-showcase {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .shop-showcase-card {
+    min-height: 86px;
+    padding: 13px;
+  }
+
+  .shop-showcase-logo {
+    width: 50px;
+    height: 50px;
+    flex-basis: 50px;
+  }
+
   .brand {
-    font-size: 18px;
+    font-size: 16px;
+    letter-spacing: -0.5px;
+  }
+
+  .brand small {
+    overflow: hidden;
+    font-size: 7px;
+    letter-spacing: 1px;
+    text-overflow: ellipsis;
+  }
+
+  .marketplace-logo {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
   }
 
   .actions .btn {
-    padding: 9px 10px;
-    font-size: 12px;
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  .actions .cart-button {
+    width: 40px;
+    height: 38px;
+    padding: 0;
+  }
+
+  .cart-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cart-count {
+    top: -5px;
+    right: -5px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 9px;
+  }
+
+  .account-avatar {
+    width: 38px;
+    height: 38px;
   }
 
   .cats {
@@ -1848,9 +1992,9 @@ img {
   }
 
   .marketplace-logo {
-    width: 42px;
-    height: 42px;
-    flex-basis: 42px;
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
   }
 
   .form {
@@ -1894,6 +2038,12 @@ img {
   .seller-form label,
   .seller-form button {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand small {
+    display: none;
   }
 }
 

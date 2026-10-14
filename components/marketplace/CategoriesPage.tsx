@@ -59,11 +59,7 @@ export function CategoriesPage() {
 
   return (
     <div className="category-page">
-      <MarketplaceHeader>
-        <Link className="category-back" href="/">
-          ← Back to home
-        </Link>
-      </MarketplaceHeader>
+      <MarketplaceHeader />
       <main>
         <section className="category-hero">
           <span className="category-pill">YOUR NEXT GREAT FIND STARTS HERE</span>
