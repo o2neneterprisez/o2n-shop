@@ -32,6 +32,40 @@ export type MarketplaceProduct = {
   created_at?: string;
 };
 
+export type MarketplaceCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  parent_id?: string | null;
+};
+
+export type MarketplaceSearchSuggestion =
+  | {
+      type: "product";
+      id: string;
+      title: string;
+      subtitle: string;
+      imageUrl: string | null;
+      href: string;
+    }
+  | {
+      type: "shop";
+      id: string;
+      title: string;
+      subtitle: string;
+      imageUrl: string | null;
+      href: string;
+    }
+  | {
+      type: "category";
+      id: string;
+      title: string;
+      subtitle: string;
+      imageUrl: null;
+      href: string;
+    };
+
 export type ShopDirectoryData = {
   shops: MarketplaceShop[];
   products: MarketplaceProduct[];
@@ -51,6 +85,9 @@ type ShopRow = {
 type CategoryRow = {
   id: string;
   name: string;
+  slug?: string;
+  description?: string | null;
+  parent_id?: string | null;
 };
 
 type ProductRow = {
@@ -187,6 +224,15 @@ const mockProducts: MarketplaceProduct[] = [
     variant_options: [{ name: "Finish", options: ["White", "Gold", "Black"] }],
     created_at: "2026-01-04T00:00:00Z",
   },
+];
+
+const mockCategories: MarketplaceCategory[] = [
+  { id: "mock-fashion", name: "Fashion", slug: "fashion", description: "Wear your style" },
+  { id: "mock-groceries", name: "Groceries", slug: "groceries", description: "Everyday needs" },
+  { id: "mock-electronics", name: "Electronics", slug: "electronics", description: "Tech & gadgets" },
+  { id: "mock-home", name: "Home", slug: "home", description: "Make it yours" },
+  { id: "mock-beauty", name: "Beauty", slug: "beauty", description: "Care & wellness" },
+  { id: "mock-other", name: "Other", slug: "other", description: "Browse more finds" },
 ];
 
 const mapCategory = (categoryId?: string | null, fallback = "Other") => {
@@ -374,4 +420,165 @@ export async function getMarketplaceData() {
       categories: ["All", "Fashion", "Groceries", "Electronics", "Home", "Beauty", "Other"],
     };
   }
+}
+
+export async function getMarketplaceCategories(): Promise<MarketplaceCategory[]> {
+  if (!supabase) return mockCategories;
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id,name,slug,description,parent_id")
+    .eq("is_active", true)
+    .order("name");
+
+  if (error) {
+    throw new Error(`Could not load active categories from Supabase: ${error.message}`);
+  }
+
+  return ((data ?? []) as CategoryRow[]).map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug ?? category.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    description: category.description,
+    parent_id: category.parent_id,
+  }));
+}
+
+export async function searchMarketplace(query: string): Promise<MarketplaceSearchSuggestion[]> {
+  if (!supabase) {
+    throw new Error("Search is unavailable because Supabase is not configured.");
+  }
+
+  const normalizedQuery = query.trim();
+  if (normalizedQuery.length < 2) return [];
+
+  const pattern = `%${normalizedQuery.replace(/[\\%_]/g, "\\$&")}%`;
+  const [productsByTitle, productsByDescription, shopsResult, categoriesResult] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id,title,category_id,shop_id")
+      .eq("status", "active")
+      .gt("stock_quantity", 0)
+      .ilike("title", pattern)
+      .limit(8),
+    supabase
+      .from("products")
+      .select("id,title,category_id,shop_id")
+      .eq("status", "active")
+      .gt("stock_quantity", 0)
+      .ilike("description", pattern)
+      .limit(8),
+    supabase
+      .from("shops")
+      .select("id,name,district,state,logo_url")
+      .eq("status", "approved")
+      .neq("name", "O2N TEST Mobile Shop — NOT REAL")
+      .ilike("name", pattern)
+      .limit(5),
+    supabase
+      .from("categories")
+      .select("id,name,slug,parent_id")
+      .eq("is_active", true)
+      .ilike("name", pattern)
+      .limit(5),
+  ]);
+
+  for (const result of [productsByTitle, productsByDescription, shopsResult, categoriesResult]) {
+    if (result.error) {
+      throw new Error(`Search failed: ${result.error.message}`);
+    }
+  }
+
+  type SearchProductRow = {
+    id: string;
+    title: string;
+    category_id: string | null;
+    shop_id: string;
+  };
+
+  const shopRows = (shopsResult.data ?? []) as Array<{
+    id: string;
+    name: string;
+    district: string | null;
+    state: string | null;
+    logo_url: string | null;
+  }>;
+  const matchedCategories = (categoriesResult.data ?? []) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    parent_id: string | null;
+  }>;
+  const categoryProductResult = matchedCategories.length
+    ? await supabase
+        .from("products")
+        .select("id,title,category_id,shop_id")
+        .eq("status", "active")
+        .gt("stock_quantity", 0)
+        .in("category_id", matchedCategories.map((category) => category.id))
+        .limit(8)
+    : { data: [], error: null };
+
+  if (categoryProductResult.error) {
+    throw new Error(`Could not load products in matching categories: ${categoryProductResult.error.message}`);
+  }
+
+  const productRows = Array.from(
+    new Map(
+      [...(productsByTitle.data ?? []), ...(productsByDescription.data ?? []), ...(categoryProductResult.data ?? [])]
+        .map((row) => [row.id, row as SearchProductRow])
+    ).values()
+  ).slice(0, 8);
+
+  const productCategoryIds = Array.from(new Set(productRows.map((row) => row.category_id).filter((id): id is string => Boolean(id))));
+  const productIds = productRows.map((row) => row.id);
+  const [productCategoriesResult, imagesResult] = await Promise.all([
+    productCategoryIds.length
+      ? supabase.from("categories").select("id,name").in("id", productCategoryIds)
+      : Promise.resolve({ data: [], error: null }),
+    productIds.length
+      ? supabase.from("product_images").select("product_id,image_url,sort_order").in("product_id", productIds).order("sort_order")
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  for (const result of [productCategoriesResult, imagesResult]) {
+    if (result.error) {
+      throw new Error(`Could not load search result details: ${result.error.message}`);
+    }
+  }
+
+  const categoryNames = new Map(
+    ((productCategoriesResult.data ?? []) as Array<{ id: string; name: string }>).map((row) => [row.id, row.name])
+  );
+  const imageUrls = new Map<string, string>();
+  for (const image of (imagesResult.data ?? []) as Array<{ product_id: string; image_url: string }>) {
+    if (!imageUrls.has(image.product_id)) imageUrls.set(image.product_id, image.image_url);
+  }
+
+  const productSuggestions: MarketplaceSearchSuggestion[] = productRows.map((product) => ({
+    type: "product",
+    id: product.id,
+    title: product.title,
+    subtitle: categoryNames.get(product.category_id ?? "") ?? "Product",
+    imageUrl: imageUrls.get(product.id) ?? null,
+    href: `/products/${encodeURIComponent(product.id)}`,
+  }));
+  const shopSuggestions: MarketplaceSearchSuggestion[] = shopRows.map((shop) => ({
+    type: "shop",
+    id: shop.id,
+    title: shop.name,
+    subtitle: [shop.district, shop.state].filter(Boolean).join(", ") || "Local shop",
+    imageUrl: shop.logo_url,
+    href: `/shops#shop-${encodeURIComponent(shop.id)}`,
+  }));
+  const categorySuggestions: MarketplaceSearchSuggestion[] = matchedCategories.map((category) => ({
+    type: "category",
+    id: category.id,
+    title: category.name,
+    subtitle: category.parent_id ? "Subcategory" : "Category",
+    imageUrl: null,
+    href: `/categories/${encodeURIComponent(category.slug)}`,
+  }));
+
+  return [...productSuggestions, ...shopSuggestions, ...categorySuggestions];
 }

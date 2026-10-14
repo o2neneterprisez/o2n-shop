@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#fff"/>
+  <text x="230" y="58" font-family="Arial,sans-serif" font-size="25" font-weight="900" font-style="italic" text-anchor="middle" fill="#080808">A New Generation E-Mall</text>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 83H78L100 130H307" stroke="#111" stroke-width="35"/>
+    <path d="M32 83H78L100 130H307" stroke="#ff1e18" stroke-width="25"/>
+    <path d="M78 83L123 278Q127 294 146 294H322Q342 294 348 274L375 130H320L299 243H143L115 130" stroke="#111" stroke-width="36"/>
+    <path d="M78 83L123 278Q127 294 146 294H322Q342 294 348 274L375 130H320L299 243H143L115 130" stroke="#ff8b00" stroke-width="25"/>
+    <path d="M115 130L143 243H299L320 130" stroke="#ffe000" stroke-width="17"/>
+    <path d="M144 294H322" stroke="#f5d900" stroke-width="23"/>
+    <path d="M147 326H333" stroke="#111" stroke-width="30"/>
+    <path d="M147 326H333" stroke="#ffca00" stroke-width="20"/>
+    <circle cx="166" cy="354" r="24" stroke="#111" stroke-width="15"/>
+    <circle cx="166" cy="354" r="24" stroke="#ff8500" stroke-width="9"/>
+    <circle cx="321" cy="354" r="24" stroke="#111" stroke-width="15"/>
+    <circle cx="321" cy="354" r="24" stroke="#ffdf00" stroke-width="9"/>
+  </g>
+  <g stroke="#111" stroke-width="8" stroke-linejoin="round" paint-order="stroke fill">
+    <text x="201" y="202" font-family="Arial,sans-serif" font-size="76" font-weight="900" text-anchor="middle" fill="#ffb800">O</text>
+    <text x="245" y="231" font-family="Arial,sans-serif" font-size="74" font-weight="900" text-anchor="middle" fill="#84d327">2</text>
+    <text x="290" y="202" font-family="Arial,sans-serif" font-size="76" font-weight="900" text-anchor="middle" fill="#ffe000">N</text>
+  </g>
+</svg>

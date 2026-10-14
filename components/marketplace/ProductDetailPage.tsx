@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { addBagItem } from "@/lib/marketplace/cart";
 import { getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
+import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
+import { useAppDispatch } from "@/lib/store/hooks";
 
 export function ProductDetailPage({ productId }: { productId: string }) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [product, setProduct] = useState<MarketplaceProduct | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -60,18 +63,17 @@ export function ProductDetailPage({ productId }: { productId: string }) {
 
   const handleAddToBag = () => {
     if (!product || product.stock_quantity < 1) return;
-    addBagItem(product.id);
+    dispatch(addBagItem(product.id));
     router.push("/");
   };
 
   if (!product) {
     return (
       <main className="productdetail-page">
-        <div className="detailbar">
-          <Link href="/" className="detail-back" aria-label="Back to products">←</Link>
-          <strong>{isLoaded ? "Product unavailable" : "Loading product…"}</strong>
-          <span className="detail-brand">O2N E-Mall</span>
-        </div>
+        <MarketplaceHeader>
+          <strong className="product-header-title">{isLoaded ? "Product unavailable" : "Loading product…"}</strong>
+          <Link href="/" className="category-back">← Products</Link>
+        </MarketplaceHeader>
         {isLoaded ? (
           <div className="detail-empty">
             <h1>Product unavailable</h1>
@@ -85,11 +87,10 @@ export function ProductDetailPage({ productId }: { productId: string }) {
 
   return (
     <main className="productdetail-page">
-      <div className="detailbar">
-        <Link href="/" className="detail-back" aria-label="Back to products">←</Link>
-        <strong>{product.title}</strong>
-        <Link href="/" className="detail-brand">O2N E-Mall</Link>
-      </div>
+      <MarketplaceHeader>
+        <strong className="product-header-title">{product.title}</strong>
+        <Link href="/" className="category-back">← Products</Link>
+      </MarketplaceHeader>
 
       <div className="detailwrap">
         <section className="detailpanel" aria-label="Product images">
