@@ -171,9 +171,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
 
   return (
     <div className="auth-page">
-      <MarketplaceHeader>
-        <Link className="category-back" href="/">← Back to shop</Link>
-      </MarketplaceHeader>
+      <MarketplaceHeader />
       <main className="auth-main">
         <section className="auth-card">
           <span className="category-pill">O2N E-MALL</span>

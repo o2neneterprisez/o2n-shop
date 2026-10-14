@@ -84,11 +84,7 @@ export function CategoryProductsPage({ slug }: { slug: string }) {
 
   return (
     <div className="category-page">
-      <MarketplaceHeader>
-        <Link className="category-back" href="/categories">
-          ← All categories
-        </Link>
-      </MarketplaceHeader>
+      <MarketplaceHeader />
       <main className="page-shell category-products-main">
         <section className="category-products-intro">
           <span className="category-pill">DISCOVER LOCAL FINDS</span>

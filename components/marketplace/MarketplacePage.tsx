@@ -6,10 +6,10 @@ import { addBagItem, removeBagItem } from "@/lib/marketplace/cart";
 import { useBagItems } from "@/lib/marketplace/useBagItems";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { getMarketplaceData, type MarketplaceProduct, type MarketplaceShop } from "@/lib/supabase/api";
+import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
 import {
   CategorySection,
   FooterSection,
-  HeaderSection,
   HeroSection,
   HowItWorksSection,
   NoticeSection,
@@ -25,7 +25,6 @@ export function MarketplacePage() {
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
   const [shops, setShops] = useState<MarketplaceShop[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [search, setSearch] = useState("");
   const [sort, setSort] = useState("new");
   const bagItems = useBagItems();
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
@@ -68,15 +67,7 @@ export function MarketplacePage() {
   return (
     <>
       <NoticeSection />
-      <HeaderSection
-        bagCount={bagCount}
-        search={search}
-        onSearchChange={(value) => {
-          setSearch(value);
-          setSelectedCategory("All");
-        }}
-        onOpenBag={() => setIsBagOpen(true)}
-      />
+      <MarketplaceHeader showSearch onOpenBag={() => setIsBagOpen(true)} />
 
       <main className="page-shell">
         <HeroSection onOpenSeller={() => setIsSellerModalOpen(true)} />
@@ -91,7 +82,7 @@ export function MarketplacePage() {
         <ProductSection
           products={products}
           selectedCategory={selectedCategory}
-          search={search}
+          search=""
           sort={sort}
           onCategoryChange={setSelectedCategory}
           onSortChange={setSort}
@@ -99,7 +90,7 @@ export function MarketplacePage() {
           onAddToBag={addToBag}
         />
 
-        <ShopSection shops={shops} products={products} search={search} onOpenSeller={() => setIsSellerModalOpen(true)} />
+        <ShopSection shops={shops} />
         <HowItWorksSection />
         <SellerCTASection onOpenSeller={() => setIsSellerModalOpen(true)} />
       </main>

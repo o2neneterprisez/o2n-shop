@@ -533,35 +533,15 @@ export function ProductSection({
   );
 }
 
-export function ShopSection({
-  shops,
-  products,
-  search,
-  onOpenSeller,
-}: {
-  shops: MarketplaceShop[];
-  products: MarketplaceProduct[];
-  search: string;
-  onOpenSeller: () => void;
-}) {
-  const query = search.trim().toLowerCase();
-  const visibleShops = shops.filter((shop) => {
-    if (!query) return true;
-    const shopProducts = products.filter((product) => product.shop_id === shop.id);
-    return (
-      matchesSearchText(shop.name, query) ||
-      matchesSearchText(shop.description, query) ||
-      matchesSearchText(shop.district, query) ||
-      matchesSearchText(shop.state, query) ||
-      shopProducts.some(
-        (product) =>
-          matchesSearchText(product.title, query) ||
-          matchesSearchText(product.description, query) ||
-          matchesCategorySearch(product.category, query)
-      )
-    );
-  });
-  const displayedShops = query ? visibleShops : visibleShops.slice(0, 4);
+export function ShopSection({ shops }: { shops: MarketplaceShop[] }) {
+  const displayedShops = [...shops]
+    .sort((left, right) => {
+      const leftCreatedAt = Date.parse(left.created_at ?? "");
+      const rightCreatedAt = Date.parse(right.created_at ?? "");
+      return (Number.isFinite(rightCreatedAt) ? rightCreatedAt : 0) -
+        (Number.isFinite(leftCreatedAt) ? leftCreatedAt : 0);
+    })
+    .slice(0, 3);
 
   return (
     <section className="section">
@@ -570,29 +550,41 @@ export function ShopSection({
           <h2>Shops worth discovering</h2>
           <p>Explore approved local sellers and their products.</p>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <Link className="link" href="/shops" style={{ textDecoration: "none", fontWeight: 800 }}>
-            Discover all shops →
-          </Link>
-          <button type="button" className="link" onClick={onOpenSeller}>
-            List your shop ↗
-          </button>
-        </div>
+        <Link className="link" href="/shops">
+          Discover more shops →
+        </Link>
       </div>
 
-      <div className="shops">
+      <div className="shop-showcase">
         {displayedShops.length ? (
-          displayedShops.map((shop) => (
-            <article key={shop.id} className="shop">
-              <span className="emoji">🏬</span>
-              <h3>{shop.name}</h3>
-              <p>{shop.district || shop.state || "Jharkhand"} · Approved shop</p>
-            </article>
-          ))
+          displayedShops.map((shop) => {
+            const initials = shop.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
+            return (
+              <Link
+                key={shop.id}
+                className="shop-showcase-card"
+                href={`/shops#shop-${encodeURIComponent(shop.id)}`}
+              >
+                <span className="shop-showcase-logo">
+                  {shop.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={shop.logo_url} alt={`${shop.name} logo`} />
+                  ) : (
+                    initials || "🏬"
+                  )}
+                </span>
+                <span className="shop-showcase-copy">
+                  <strong>{shop.name}</strong>
+                  <small>{shop.district || shop.state || "Jharkhand"} · Approved shop</small>
+                </span>
+                <span className="shop-showcase-arrow" aria-hidden="true">↗</span>
+              </Link>
+            );
+          })
         ) : (
-          <div className="empty">
-            <h3>{query ? "No matching shops" : "Shops are joining O2N"}</h3>
-            <p>{query ? "Try another shop name, product, or category." : "Approved shops will appear here."}</p>
+          <div className="empty shop-showcase-empty">
+            <h3>Shops are joining O2N</h3>
+            <p>Approved shops will appear here.</p>
           </div>
         )}
       </div>
