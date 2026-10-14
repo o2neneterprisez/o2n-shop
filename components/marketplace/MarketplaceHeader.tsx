@@ -150,7 +150,10 @@ function MarketplaceSearch() {
   return (
     <div className="marketplace-search" ref={searchRef}>
       <label className="search">
-        <span aria-hidden="true">⌕</span>
+        <svg className="search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none">
+          <circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" strokeWidth="2" />
+          <path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
         <input
           type="search"
           role="combobox"

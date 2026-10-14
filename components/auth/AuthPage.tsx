@@ -18,26 +18,13 @@ const authCopy: Record<AuthMode, { title: string; description: string }> = {
   "update-password": { title: "Choose a new password", description: "Use a strong password you haven’t used before." },
 };
 
-function normalizePhoneNumber(value: string) {
-  const phone = value.trim().replace(/[\s()-]/g, "");
-  if (/^\d{10}$/.test(phone)) return `+91${phone}`;
-  if (/^\+?[1-9]\d{7,14}$/.test(phone)) return phone.startsWith("+") ? phone : `+${phone}`;
-  return null;
-}
-
 export function AuthPage({ mode }: { mode: AuthMode }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [pendingPhone, setPendingPhone] = useState<string | null>(null);
-  const [pendingEmail, setPendingEmail] = useState("");
-  const [pendingPhonePurpose, setPendingPhonePurpose] = useState<"signup" | "password-reset" | null>(null);
-  const [phoneOtp, setPhoneOtp] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,52 +46,13 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
       return;
     }
 
-    if (mode === "signup" && !normalizePhoneNumber(phone)) {
-      setError("Enter a valid mobile number with country code, or a 10-digit Indian mobile number.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
-      if (pendingPhone) {
-        const { data, error: verifyError } = await supabase.auth.verifyOtp({
-          phone: pendingPhone,
-          token: phoneOtp.trim(),
-          type: "sms",
-        });
-        if (verifyError) throw verifyError;
-
-        dispatch(setAuthUser(authUserFromSupabase(data.user)));
-        setPendingPhone(null);
-        setPendingPhonePurpose(null);
-        if (pendingPhonePurpose === "password-reset") {
-          router.replace("/auth/update-password");
-          router.refresh();
-          return;
-        }
-        if (pendingPhonePurpose === "signup" && pendingEmail) {
-          const { error: emailError } = await supabase.auth.updateUser(
-            { email: pendingEmail },
-            { emailRedirectTo: `${window.location.origin}/auth/login` }
-          );
-          if (emailError) {
-            throw new Error(`Your phone is verified, but the email could not be linked: ${emailError.message}`);
-          }
-          setMessage("Mobile verified. Check your email to confirm and link it to your account. You can sign in with your mobile number meanwhile.");
-          return;
-        }
-
-        router.replace("/");
-        router.refresh();
-        return;
-      }
-
       if (mode === "login") {
-        const identifier = loginIdentifier.trim();
-        const credentials = identifier.includes("@")
-          ? { email: identifier, password }
-          : { phone: normalizePhoneNumber(identifier) ?? identifier, password };
-        const { data, error: authError } = await supabase.auth.signInWithPassword(credentials);
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
         if (authError) throw authError;
         dispatch(setAuthUser(authUserFromSupabase(data.user)));
         router.replace("/");
@@ -113,47 +61,34 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
       }
 
       if (mode === "signup") {
-        const normalizedPhone = normalizePhoneNumber(phone);
-        if (!normalizedPhone) throw new Error("Enter a valid mobile number.");
         const { data, error: authError } = await supabase.auth.signUp({
-          phone: normalizedPhone,
+          email: email.trim(),
           password,
           options: {
-            channel: "sms",
+            emailRedirectTo: `${window.location.origin}/auth/login`,
             data: {
               full_name: fullName.trim(),
-              ...(email.trim() ? { contact_email: email.trim() } : {}),
             },
           },
         });
         if (authError) throw authError;
         if (!data.user) throw new Error("The account was not created. Please try again.");
-        setPendingPhone(normalizedPhone);
-        setPendingEmail(email.trim());
-        setPendingPhonePurpose("signup");
-        setMessage(`Enter the verification code sent to ${normalizedPhone}.`);
+        if (data.session) {
+          dispatch(setAuthUser(authUserFromSupabase(data.user)));
+          router.replace("/");
+          router.refresh();
+          return;
+        }
+        setMessage("Your account was created. Check your email for a confirmation link before signing in.");
         return;
       }
 
       if (mode === "forgot-password") {
-        if (email.trim().includes("@")) {
-          const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-            redirectTo: `${window.location.origin}/auth/update-password`,
-          });
-          if (authError) throw authError;
-          setMessage("If an account exists for that email, we’ve sent a password reset link.");
-        } else {
-          const normalizedPhone = normalizePhoneNumber(email);
-          if (!normalizedPhone) throw new Error("Enter a valid email address or mobile number.");
-          const { error: authError } = await supabase.auth.signInWithOtp({
-            phone: normalizedPhone,
-            options: { shouldCreateUser: false, channel: "sms" },
-          });
-          if (authError) throw authError;
-          setPendingPhone(normalizedPhone);
-          setPendingPhonePurpose("password-reset");
-          setMessage(`Enter the verification code sent to ${normalizedPhone} to reset your password.`);
-        }
+        const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/auth/update-password`,
+        });
+        if (authError) throw authError;
+        setMessage("If an account exists for that email, we’ve sent a password reset link.");
         return;
       }
 
@@ -179,7 +114,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           <p className="auth-description">{description}</p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
-            {mode === "signup" && !pendingPhone ? (
+            {mode === "signup" ? (
               <label>
                 Full name
                 <input
@@ -192,62 +127,46 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
               </label>
             ) : null}
 
-            {mode === "signup" && !pendingPhone ? (
+            {mode === "signup" ? (
               <label>
-                Mobile number
-                <input
-                  autoComplete="tel"
-                  inputMode="tel"
-                  placeholder="+91 98765 43210"
-                  required
-                  type="tel"
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                />
-                <small className="auth-field-hint">You’ll verify this number and can use it to sign in.</small>
-              </label>
-            ) : null}
-
-            {mode === "signup" && !pendingPhone ? (
-              <label>
-                Email address <span className="auth-optional">(Optional)</span>
+                Email address
                 <input
                   autoComplete="email"
+                  required
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
-                <small className="auth-field-hint">Confirm it by email to use it as another sign-in method.</small>
               </label>
             ) : null}
 
             {mode === "login" ? (
               <label>
-                Email address or mobile number
+                Email address
                 <input
-                  autoComplete="username"
+                  autoComplete="email"
                   required
-                  type="text"
-                  value={loginIdentifier}
-                  onChange={(event) => setLoginIdentifier(event.target.value)}
-                />
-              </label>
-            ) : null}
-
-            {mode === "forgot-password" && !pendingPhone ? (
-              <label>
-                Email address or mobile number
-                <input
-                  autoComplete="username"
-                  required
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                 />
               </label>
             ) : null}
 
-            {!pendingPhone && (passwordMode || mode === "update-password") ? (
+            {mode === "forgot-password" ? (
+              <label>
+                Email address
+                <input
+                  autoComplete="email"
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+            ) : null}
+
+            {(passwordMode || mode === "update-password") ? (
               <label>
                 Password
                 <input
@@ -261,7 +180,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
               </label>
             ) : null}
 
-            {!pendingPhone && (mode === "signup" || mode === "update-password") ? (
+            {(mode === "signup" || mode === "update-password") ? (
               <label>
                 Confirm password
                 <input
@@ -271,20 +190,6 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                   type="password"
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-              </label>
-            ) : null}
-
-            {pendingPhone ? (
-              <label>
-                SMS verification code
-                <input
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  required
-                  type="text"
-                  value={phoneOtp}
-                  onChange={(event) => setPhoneOtp(event.target.value)}
                 />
               </label>
             ) : null}
@@ -301,16 +206,12 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
             <button className="btn primary auth-submit" disabled={isSubmitting} type="submit">
               {isSubmitting
                 ? "Please wait…"
-                : pendingPhone
-                  ? "Verify mobile number"
-                  : mode === "login"
+                : mode === "login"
                   ? "Sign in"
                   : mode === "signup"
                     ? "Create account"
                     : mode === "forgot-password"
-                      ? pendingPhone
-                        ? "Verify mobile number"
-                        : "Send reset link"
+                      ? "Send reset link"
                       : "Update password"}
             </button>
           </form>
