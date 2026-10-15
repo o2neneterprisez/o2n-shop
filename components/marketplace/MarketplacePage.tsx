@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { addBagItem, removeBagItem } from "@/lib/marketplace/cart";
-import { useBagItems } from "@/lib/marketplace/useBagItems";
+import { addBagItem } from "@/lib/marketplace/cart";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { getMarketplaceData, type MarketplaceProduct, type MarketplaceShop } from "@/lib/supabase/api";
 import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
@@ -26,9 +25,7 @@ export function MarketplacePage() {
   const [shops, setShops] = useState<MarketplaceShop[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sort, setSort] = useState("new");
-  const bagItems = useBagItems();
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
-  const [isBagOpen, setIsBagOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -40,34 +37,14 @@ export function MarketplacePage() {
     loadData();
   }, []);
 
-  const bagCount = useMemo(() => Object.values(bagItems).reduce((sum, quantity) => sum + quantity, 0), [bagItems]);
-
-  const bagProducts = useMemo(
-    () =>
-      Object.entries(bagItems)
-        .map(([productId, quantity]) => {
-          const product = products.find((item) => item.id === productId);
-          return product ? { product, quantity } : null;
-        })
-        .filter(Boolean) as Array<{ product: MarketplaceProduct; quantity: number }>,
-    [bagItems, products]
-  );
-
-  const bagTotal = bagProducts.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
   const addToBag = (productId: string) => {
     dispatch(addBagItem(productId));
-    setIsBagOpen(true);
-  };
-
-  const removeFromBag = (productId: string) => {
-    dispatch(removeBagItem(productId));
   };
 
   return (
     <>
       <NoticeSection />
-      <MarketplaceHeader showSearch onOpenBag={() => setIsBagOpen(true)} />
+      <MarketplaceHeader showSearch />
 
       <main className="page-shell">
         <HeroSection onOpenSeller={() => setIsSellerModalOpen(true)} />
@@ -96,58 +73,6 @@ export function MarketplacePage() {
       </main>
 
       <FooterSection />
-
-      {isBagOpen && (
-        <div className="modal-backdrop open" onClick={() => setIsBagOpen(false)}>
-          <div className="cart-panel" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <span className="pill">Your bag</span>
-                <h3>{bagCount} items selected</h3>
-              </div>
-              <button type="button" className="close-button" onClick={() => setIsBagOpen(false)}>
-                ×
-              </button>
-            </div>
-
-            <div className="cart-list">
-              {bagProducts.length ? (
-                bagProducts.map(({ product, quantity }) => (
-                  <div key={product.id} className="cart-item">
-                    <img src={product.image ?? "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80"} alt={product.title} />
-                    <div>
-                      <h4>{product.title}</h4>
-                      <p>
-                        {product.shopName} · ₹{product.price.toLocaleString("en-IN")}
-                      </p>
-                      <div className="quantity-control">
-                        <button type="button" onClick={() => removeFromBag(product.id)}>-</button>
-                        <span>{quantity}</span>
-                        <button type="button" onClick={() => addToBag(product.id)}>+</button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="empty compact">
-                  <h3>Your bag is empty</h3>
-                  <p>Add a product to start shopping.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="checkout-box">
-              <div>
-                <span>Subtotal</span>
-                <strong>₹{bagTotal.toLocaleString("en-IN")}</strong>
-              </div>
-              <button type="button" className="btn primary">
-                Continue to checkout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isSellerModalOpen && (
         <div className="modal-backdrop open" onClick={() => setIsSellerModalOpen(false)}>

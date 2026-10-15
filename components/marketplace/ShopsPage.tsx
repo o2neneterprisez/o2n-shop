@@ -199,7 +199,7 @@ export function ShopsPage() {
               {visibleShops.length ? visibleShops.map((shop) => (
                 <article className="shop-card" key={shop.id}>
                   <div className="shop-cover">
-                    <div className="shop-avatar">
+                    <div className={`shop-avatar ${viewMode === "list" ? "shop-avatar-list" : ""}`}>
                       {shop.logo_url ? <img src={shop.logo_url} alt={`${shop.name} logo`} /> : getInitials(shop.name)}
                     </div>
                   </div>
