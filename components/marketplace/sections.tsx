@@ -78,12 +78,10 @@ export function HeaderSection({
   bagCount,
   search,
   onSearchChange,
-  onOpenBag,
 }: {
   bagCount: number;
   search: string;
   onSearchChange: (value: string) => void;
-  onOpenBag: () => void;
 }) {
   const router = useRouter();
   const searchRef = useRef<HTMLDivElement>(null);
@@ -236,7 +234,7 @@ export function HeaderSection({
         <button
           type="button"
           className="btn primary cart-button"
-          onClick={onOpenBag}
+          onClick={() => router.push("/cart")}
           aria-label={`Open cart, ${bagCount} ${bagCount === 1 ? "item" : "items"}`}
         >
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
@@ -512,7 +510,6 @@ export function ProductSection({
                 <div className="pinfo">
                   <span className="pill">Verified listing</span>
                   <h3 className="open-detail" onClick={() => onOpenProduct(product.id)}>{product.title}</h3>
-                  <p>{product.description}</p>
                   <div className="price">₹{product.price.toLocaleString("en-IN")}</div>
                   {discount > 0 ? (
                     <small style={{ color: "#16834a", fontWeight: 800 }}>

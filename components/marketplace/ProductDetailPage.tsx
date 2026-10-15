@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { addBagItem } from "@/lib/marketplace/cart";
 import { getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
@@ -9,7 +8,6 @@ import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
 import { useAppDispatch } from "@/lib/store/hooks";
 
 export function ProductDetailPage({ productId }: { productId: string }) {
-  const router = useRouter();
   const dispatch = useAppDispatch();
   const [product, setProduct] = useState<MarketplaceProduct | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -64,7 +62,6 @@ export function ProductDetailPage({ productId }: { productId: string }) {
   const handleAddToBag = () => {
     if (!product || product.stock_quantity < 1) return;
     dispatch(addBagItem(product.id));
-    router.push("/");
   };
 
   if (!product) {

@@ -240,11 +240,9 @@ function MarketplaceSearch() {
 export function MarketplaceHeader({
   children,
   showSearch = false,
-  onOpenBag,
 }: {
   children?: ReactNode;
   showSearch?: boolean;
-  onOpenBag?: () => void;
 }) {
   const router = useRouter();
   const bagItems = useAppSelector((state) => state.cart.items);
@@ -276,7 +274,7 @@ export function MarketplaceHeader({
           <button
             type="button"
             className="btn primary cart-button"
-            onClick={onOpenBag ?? (() => router.push("/"))}
+            onClick={() => router.push("/cart")}
             aria-label={`Open cart, ${bagCount} ${bagCount === 1 ? "item" : "items"}`}
           >
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
