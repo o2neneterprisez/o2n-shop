@@ -55,7 +55,13 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
         });
         if (authError) throw authError;
         dispatch(setAuthUser(authUserFromSupabase(data.user)));
-        router.replace("/");
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profileError) throw profileError;
+        router.replace(profile?.role === "admin" || profile?.role === "super_admin" ? "/admin" : "/");
         router.refresh();
         return;
       }
