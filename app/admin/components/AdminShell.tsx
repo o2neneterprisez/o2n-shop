@@ -27,7 +27,10 @@ const NAV_GROUPS = [
   },
   {
     heading: "PEOPLE",
-    items: [{ href: "/admin/customers", label: "Customers", icon: "customers" }],
+    items: [
+      { href: "/admin/sellers", label: "Sellers", icon: "sellers" },
+      { href: "/admin/customers", label: "Customers", icon: "customers" },
+    ],
   },
 ];
 
@@ -109,7 +112,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const title = pathname.startsWith("/admin/products/")
     ? "Products"
-    : NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === pathname)?.label ?? "Dashboard";
+    : pathname.startsWith("/admin/shops/")
+      ? "Shops"
+      : NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === pathname)?.label ?? "Dashboard";
 
   return (
     <AdminContextProvider value={{ user, search, setSearch }}>
