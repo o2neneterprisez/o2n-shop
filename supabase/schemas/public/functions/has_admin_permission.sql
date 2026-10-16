@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.has_admin_permission (
   SET search_path TO ''
   AS $function$
  select exists(select 1 from public.profiles p where p.id=(select auth.uid()) and p.role='super_admin')
- or exists(select 1 from public.profiles p join public.admin_access aa on aa.user_id=p.id where p.id=(select auth.uid()) and p.role='admin' and aa.is_active and coalesce((aa.permissions ->> permission_name)::boolean,false));
+ or exists(select 1 from public.profiles p join public.admin_access aa on aa.user_id=p.id where p.id=(select auth.uid()) and p.role in ('admin','fse') and aa.is_active and coalesce((aa.permissions ->> permission_name)::boolean,false));
 $function$;
 
 GRANT EXECUTE ON FUNCTION "public"."has_admin_permission"(text) TO "authenticated";
