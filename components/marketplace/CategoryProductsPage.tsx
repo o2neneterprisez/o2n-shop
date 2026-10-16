@@ -116,7 +116,7 @@ export function CategoryProductsPage({ slug }: { slug: string }) {
             onCategoryChange={() => {}}
             onSortChange={setSort}
             onOpenProduct={(productId) => router.push(`/products/${encodeURIComponent(productId)}`)}
-            onAddToBag={(productId) => dispatch(addBagItem(productId))}
+            onAddToBag={(productId) => dispatch(addBagItem({ productId }))}
             heading={`${category?.name ?? "All"} products`}
           />
         ) : null}

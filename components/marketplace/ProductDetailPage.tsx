@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { addBagItem } from "@/lib/marketplace/cart";
-import { getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
+import { addBagItem, bagLineKey } from "@/lib/marketplace/cart";
+import { useBagItems } from "@/lib/marketplace/useBagItems";
+import { findMatchingVariant, getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
 import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
 import { useAppDispatch } from "@/lib/store/hooks";
 
 export function ProductDetailPage({ productId }: { productId: string }) {
   const dispatch = useAppDispatch();
+  const bagItems = useBagItems();
   const [product, setProduct] = useState<MarketplaceProduct | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -55,13 +57,23 @@ export function ProductDetailPage({ productId }: { productId: string }) {
       ? [product.image]
       : [];
   const image = images[activeImage];
-  const discount = product?.compare_at_price && product.compare_at_price > product.price
-    ? Math.round((1 - product.price / product.compare_at_price) * 100)
+  const hasVariants = Boolean(product?.variants?.length);
+  const selectedVariant = product ? findMatchingVariant(product, selectedVariants) : null;
+  const price = selectedVariant?.price ?? product?.price ?? 0;
+  const compareAtPrice = selectedVariant ? selectedVariant.compare_at_price : product?.compare_at_price ?? null;
+  const stock = hasVariants ? selectedVariant?.stock_quantity ?? 0 : product?.stock_quantity ?? 0;
+  const discount = compareAtPrice && compareAtPrice > price
+    ? Math.round((1 - price / compareAtPrice) * 100)
     : 0;
+  const bagSelection = product
+    ? { productId: product.id, variantId: selectedVariant?.id ?? null, options: selectedVariants }
+    : null;
+  const quantityInBag = bagSelection ? bagItems[bagLineKey(bagSelection)]?.quantity ?? 0 : 0;
+  const canAddToBag = Boolean(bagSelection) && (!hasVariants || Boolean(selectedVariant)) && quantityInBag < stock;
 
   const handleAddToBag = () => {
-    if (!product || product.stock_quantity < 1) return;
-    dispatch(addBagItem(product.id));
+    if (!bagSelection || !canAddToBag) return;
+    dispatch(addBagItem(bagSelection));
   };
 
   if (!product) {
@@ -134,15 +146,17 @@ export function ProductDetailPage({ productId }: { productId: string }) {
         <section className="detailpanel">
           <span className="pill">Verified listing</span>
           <h1 className="detail-name">{product.title}</h1>
-          <div className="detailprice">₹{product.price.toLocaleString("en-IN")}</div>
+          <div className="detailprice">₹{price.toLocaleString("en-IN")}</div>
           {discount > 0 ? (
             <div>
-              <span className="detailmrp">₹{Number(product.compare_at_price).toLocaleString("en-IN")}</span>
+              <span className="detailmrp">₹{Number(compareAtPrice).toLocaleString("en-IN")}</span>
               <span className="detailoff">{discount}% OFF</span>
             </div>
           ) : null}
           <p className="detail-stock">
-            {product.stock_quantity > 0 ? `In stock · ${product.stock_quantity} available` : "Currently out of stock"}
+            {hasVariants && !selectedVariant
+              ? "This combination is not available"
+              : stock > 0 ? `In stock · ${stock} available` : "Currently out of stock"}
           </p>
 
           {product.variant_options?.map((variant) => (
@@ -166,8 +180,8 @@ export function ProductDetailPage({ productId }: { productId: string }) {
           ))}
 
           <div className="detailactions">
-            <button type="button" className="btn primary" onClick={handleAddToBag} disabled={product.stock_quantity < 1}>
-              Add to bag
+            <button type="button" className="btn primary" onClick={handleAddToBag} disabled={!canAddToBag}>
+              {quantityInBag > 0 && quantityInBag >= stock ? "All available stock in bag" : "Add to bag"}
             </button>
             <Link href="/" className="btn secondary">Continue shopping</Link>
           </div>

@@ -35,6 +35,14 @@ CREATE INDEX seller_applications_owner_idx ON public.seller_applications USING b
 
 CREATE INDEX seller_applications_reviewed_by_idx ON public.seller_applications USING btree (reviewed_by);
 
+CREATE UNIQUE INDEX seller_applications_owner_unique ON public.seller_applications USING btree (owner_id);
+
+CREATE UNIQUE INDEX seller_applications_email_unique ON public.seller_applications USING btree (lower(btrim(email))) WHERE ((email IS NOT NULL) AND (btrim(email) <> ''::text));
+
+CREATE UNIQUE INDEX seller_applications_phone_unique ON public.seller_applications USING btree (regexp_replace(phone, '\D'::text, ''::text, 'g'::text)) WHERE ((phone IS NOT NULL) AND (regexp_replace(phone, '\D'::text, ''::text, 'g'::text) <> ''::text));
+
+REVOKE INSERT ON TABLE public.seller_applications FROM authenticated;
+
 CREATE TRIGGER seller_application_provision_shop
   AFTER UPDATE OF status ON public.seller_applications
   FOR EACH ROW

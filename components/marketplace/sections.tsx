@@ -496,6 +496,10 @@ export function ProductSection({
             const discount = product.compare_at_price && product.compare_at_price > product.price
               ? Math.round((1 - product.price / product.compare_at_price) * 100)
               : 0;
+            const hasOptions = Boolean(product.variants?.length) ||
+              Boolean(product.variant_options?.some((variant) => variant.options.length > 0));
+            const variantPrices = product.variants?.map((variant) => variant.price) ?? [];
+            const lowestPrice = variantPrices.length ? Math.min(...variantPrices) : product.price;
 
             return (
               <article key={product.id} className="product">
@@ -510,15 +514,22 @@ export function ProductSection({
                 <div className="pinfo">
                   <span className="pill">Verified listing</span>
                   <h3 className="open-detail" onClick={() => onOpenProduct(product.id)}>{product.title}</h3>
-                  <div className="price">₹{product.price.toLocaleString("en-IN")}</div>
+                  <div className="price">
+                    {variantPrices.length && variantPrices.some((value) => value !== lowestPrice) ? "From " : ""}
+                    ₹{lowestPrice.toLocaleString("en-IN")}
+                  </div>
                   {discount > 0 ? (
                     <small style={{ color: "#16834a", fontWeight: 800 }}>
                       {discount}% OFF · <s style={{ color: "#7a8192" }}>₹{Number(product.compare_at_price ?? 0).toLocaleString("en-IN")}</s>
                     </small>
                   ) : null}
                   <small>{product.shopName}</small>
-                  <button type="button" className="btn primary addbag" onClick={() => onAddToBag(product.id)}>
-                    Add to bag
+                  <button
+                    type="button"
+                    className="btn primary addbag"
+                    onClick={() => (hasOptions ? onOpenProduct(product.id) : onAddToBag(product.id))}
+                  >
+                    {hasOptions ? "Choose options" : "Add to bag"}
                   </button>
                 </div>
               </article>

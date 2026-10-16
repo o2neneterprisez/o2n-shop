@@ -57,7 +57,11 @@ export type SellerApplication = {
   business_name: string;
   contact_name: string | null;
   email: string | null;
+  phone: string | null;
+  address: string | null;
   district: string | null;
+  state: string;
+  notes: string | null;
   status: string;
   created_at: string;
 };

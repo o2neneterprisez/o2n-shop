@@ -1538,7 +1538,133 @@
   font-size: 12px;
 }
 
+.shopEditLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 18px;
+  align-items: start;
+}
+
+.shopEditLayout .productEditorCard {
+  width: 100%;
+  margin: 0;
+}
+
+.sellerDetailsCard {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.sellerDetailsCard .secondaryButton {
+  text-decoration: none;
+}
+
+.sellerDetailsEmpty {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
+.sellerDetailsIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sellerDetailsIdentity > div {
+  display: grid;
+  min-width: 0;
+  justify-items: start;
+  gap: 5px;
+}
+
+.sellerDetailsIdentity strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: #4a4e61;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sellerDetailsAvatar {
+  display: grid;
+  overflow: hidden;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f1f2ff;
+  color: var(--admin-blue-dark);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sellerDetailsAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sellerDetailsList {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--admin-line);
+}
+
+.sellerDetailsList > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--admin-line);
+}
+
+.sellerDetailsList dt {
+  color: var(--admin-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.sellerDetailsList dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: #555a6c;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.sellerDetailsList dd a {
+  color: var(--admin-blue-dark);
+  text-decoration: none;
+}
+
+.sellerDetailsList dd small {
+  color: var(--admin-muted);
+  font-size: 10px;
+  text-transform: capitalize;
+}
+
+.sellerDetailsList code {
+  color: #858a9c;
+  font-size: 10px;
+}
+
 @media (max-width: 1150px) {
+  .shopEditLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sellerDetailsCard {
+    position: static;
+  }
+
+
   .statsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

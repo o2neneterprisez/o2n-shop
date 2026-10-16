@@ -7,6 +7,8 @@ type SellerBody = {
   id?: unknown;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function jsonError(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
@@ -81,6 +83,29 @@ function validatedProfileFields(body: SellerBody) {
 export async function GET(request: Request) {
   const authorization = await getAuthorizedAdminClient(request);
   if (authorization.error) return authorization.error;
+
+  const sellerId = new URL(request.url).searchParams.get("id");
+  if (sellerId !== null) {
+    if (!UUID_PATTERN.test(sellerId)) return jsonError("A valid seller account is required.", 400);
+
+    const { data: profile, error: profileError } = await authorization.client
+      .from("profiles")
+      .select("id,display_name,phone,created_at")
+      .eq("id", sellerId)
+      .maybeSingle();
+    if (profileError) {
+      console.error("Unable to load seller profile:", profileError.message);
+      return jsonError("Unable to load the seller.", 500);
+    }
+    if (!profile) return jsonError("Seller account not found.", 404);
+
+    const { data: userData, error: userError } = await authorization.client.auth.admin.getUserById(sellerId);
+    if (userError) {
+      console.error("Unable to load seller account email:", userError.message);
+      return jsonError("Unable to load seller account details.", 500);
+    }
+    return Response.json({ seller: { ...profile, email: userData.user.email ?? null } });
+  }
 
   const { data: profiles, error: profileError } = await authorization.client
     .from("profiles")
@@ -168,7 +193,7 @@ export async function PATCH(request: Request) {
   const body = await readBody(request);
   if (isResponse(body)) return body;
   const id = typeof body.id === "string" ? body.id : "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+  if (!UUID_PATTERN.test(id)) {
     return jsonError("A valid seller account is required.", 400);
   }
 

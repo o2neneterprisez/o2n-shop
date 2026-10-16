@@ -114,6 +114,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     ? "Products"
     : pathname.startsWith("/admin/shops/")
       ? "Shops"
+      : pathname.startsWith("/admin/applications/")
+        ? "Seller applications"
       : NAV_GROUPS.flatMap((group) => group.items).find((item) => item.href === pathname)?.label ?? "Dashboard";
 
   return (
@@ -130,7 +132,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <div className={styles.navGroup} key={group.heading}>
                 <p className={styles.navHeading}>{group.heading}</p>
                 {group.items.map((item) => (
-                  <Link aria-current={pathname === item.href ? "page" : undefined} className={`${styles.navItem} ${pathname === item.href ? styles.navItemActive : ""}`} href={item.href} key={item.href} onClick={() => { setSearch(""); setSidebarOpen(false); }}>
+                  <Link aria-current={pathname === item.href || (item.href === "/admin/applications" && pathname.startsWith("/admin/applications/")) ? "page" : undefined} className={`${styles.navItem} ${pathname === item.href || (item.href === "/admin/applications" && pathname.startsWith("/admin/applications/")) ? styles.navItemActive : ""}`} href={item.href} key={item.href} onClick={() => { setSearch(""); setSidebarOpen(false); }}>
                     <Icon name={item.icon} size={18} /><span>{item.label}</span>
                   </Link>
                 ))}

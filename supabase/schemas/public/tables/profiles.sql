@@ -12,6 +12,8 @@ CREATE TABLE "public"."profiles" (
   CONSTRAINT "profiles_role_check" CHECK ((role = ANY (ARRAY['customer'::text, 'seller'::text, 'admin'::text, 'super_admin'::text])))
 );
 
+CREATE UNIQUE INDEX profiles_phone_unique ON public.profiles USING btree (regexp_replace(phone, '\D'::text, ''::text, 'g'::text)) WHERE ((phone IS NOT NULL) AND (regexp_replace(phone, '\D'::text, ''::text, 'g'::text) <> ''::text));
+
 ALTER TABLE "public"."profiles"
   ENABLE ROW LEVEL SECURITY;
 
