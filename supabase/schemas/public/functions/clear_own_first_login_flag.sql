@@ -12,7 +12,7 @@ begin
      set must_change_password = false,
          updated_at = now()
    where id = auth.uid()
-     and role in ('admin','super_admin')
+     and role in ('admin','fse','super_admin')
      and must_change_password = true;
   return true;
 end;

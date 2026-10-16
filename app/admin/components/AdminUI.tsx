@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import type { ReactNode } from "react";
 import styles from "../admin.module.css";
 
@@ -11,6 +12,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     shops: <><path d="M3 10h18l-1.5-6h-15L3 10Z" /><path d="M5 10v10h14V10M9 20v-6h6v6" /><path d="M3 10c0 1.7 2.5 2.3 3.5.7 1 1.6 3.5 1 3.5-.7 0 1.7 2.5 2.3 3.5.7 1 1.6 3.5 1 3.5-.7 0 1.7 2.5 2.3 3.5.7" /></>,
     applications: <><path d="M8 4h8M9 3h6v3H9z" /><rect x="5" y="5" width="14" height="16" rx="2" /><path d="m8 13 2 2 5-5" /></>,
     categories: <><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><rect x="13" y="13" width="8" height="8" rx="2" /></>,
+    staff: <><circle cx="9" cy="8" r="3.5" /><path d="M3 20a6 6 0 0 1 12 0" /><path d="m16 11 2 2 4-4" /></>,
     customers: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4.6" /></>,
     sellers: <><path d="M16 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-5A4.5 4.5 0 0 0 2 18.5V20" /><circle cx="9" cy="7" r="4" /><path d="M16 11a4 4 0 0 0 0-8M17 14h1a4 4 0 0 1 4 4v2" /></>,
     search: <><circle cx="10.8" cy="10.8" r="6.7" /><path d="m16 16 5 5" /></>,
@@ -36,6 +38,15 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
   );
 }
 
+/** Square list thumbnail that falls back to the name's first letter when there is no image. */
+export function Thumbnail({ src, name }: { src: string | null | undefined; name: string }) {
+  return (
+    <span className={styles.listThumbnail}>
+      {src ? <Image alt="" height={40} src={src} unoptimized width={40} /> : name.trim().slice(0, 1).toUpperCase() || "?"}
+    </span>
+  );
+}
+
 export function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(amount) || 0);
 }
@@ -54,7 +65,7 @@ export function StatusBadge({ status }: { status: string }) {
     ? "success"
     : ["pending", "processing", "authorized", "confirmed"].includes(normalized)
       ? "warning"
-      : ["rejected", "suspended", "cancelled", "failed", "refunded", "archived", "hidden"].includes(normalized)
+      : ["rejected", "suspended", "cancelled", "failed", "refunded", "archived", "hidden", "deactivated"].includes(normalized)
         ? "danger"
         : "neutral";
   return <span className={`${styles.statusBadge} ${styles[`status${kind}`]}`}><i />{formatStatus(status)}</span>;

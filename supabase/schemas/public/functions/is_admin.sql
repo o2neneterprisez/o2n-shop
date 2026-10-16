@@ -8,7 +8,16 @@ CREATE OR REPLACE FUNCTION public.is_admin()
  select exists (
    select 1 from public.profiles p
    where p.id = (select auth.uid())
-     and p.role in ('admin','super_admin')
+     and (
+       p.role = 'super_admin'
+       or (
+         p.role = 'admin'
+         and not exists (
+           select 1 from public.admin_access aa
+           where aa.user_id = p.id and not aa.is_active
+         )
+       )
+     )
  );
 $function$;
 

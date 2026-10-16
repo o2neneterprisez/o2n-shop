@@ -16,6 +16,11 @@ CREATE TABLE "public"."admin_access" (
 ALTER TABLE "public"."admin_access"
   ENABLE ROW LEVEL SECURITY;
 
+CREATE TRIGGER admin_access_updated_at
+  BEFORE UPDATE ON public.admin_access
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_updated_at();
+
 CREATE POLICY "super admin delete staff access" ON "public"."admin_access"
   FOR DELETE
   TO "authenticated"

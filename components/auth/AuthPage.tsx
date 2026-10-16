@@ -73,7 +73,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           .eq("id", data.user.id)
           .maybeSingle();
         if (profileError) throw profileError;
-        router.replace(returnPath ?? (profile?.role === "admin" || profile?.role === "super_admin" ? "/admin" : "/"));
+        router.replace(returnPath ?? (profile?.role && ["admin", "fse", "super_admin"].includes(profile.role) ? "/admin" : "/"));
         router.refresh();
         return;
       }

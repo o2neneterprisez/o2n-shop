@@ -1,9 +1,13 @@
+import type { StaffPermission } from "@/lib/admin/staff";
+
 export type AdminUser = {
   id: string;
   email: string | null;
   displayName: string | null;
-  role: "admin" | "super_admin";
+  role: "admin" | "fse" | "super_admin";
   avatarUrl: string | null;
+  /** Permissions granted through admin_access; only loaded for Field Sales Executives. */
+  permissions: StaffPermission[];
 };
 
 export type Product = {
@@ -15,6 +19,7 @@ export type Product = {
   created_at: string;
   shop_id: string;
   category_id: string | null;
+  image_url?: string | null;
 };
 
 export type Shop = {
@@ -25,6 +30,7 @@ export type Shop = {
   district: string | null;
   created_at: string;
   owner_id: string;
+  logo_url: string | null;
 };
 
 export type Order = {

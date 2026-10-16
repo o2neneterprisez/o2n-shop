@@ -9,7 +9,7 @@ CREATE TABLE "public"."profiles" (
   "must_change_password" boolean                  NOT NULL DEFAULT false,
   CONSTRAINT "profiles_id_fkey" FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT "profiles_pkey" PRIMARY KEY (id),
-  CONSTRAINT "profiles_role_check" CHECK ((role = ANY (ARRAY['customer'::text, 'seller'::text, 'admin'::text, 'super_admin'::text])))
+  CONSTRAINT "profiles_role_check" CHECK ((role = ANY (ARRAY['customer'::text, 'seller'::text, 'fse'::text, 'admin'::text, 'super_admin'::text])))
 );
 
 CREATE UNIQUE INDEX profiles_phone_unique ON public.profiles USING btree (regexp_replace(phone, '\D'::text, ''::text, 'g'::text)) WHERE ((phone IS NOT NULL) AND (regexp_replace(phone, '\D'::text, ''::text, 'g'::text) <> ''::text));

@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Product } from "../types";
 import styles from "../admin.module.css";
 import { useAdminContext } from "./AdminContext";
-import { DataError, DataSection, EmptyRow, formatDate, formatMoney, Icon, StatusBadge, StatusSelect } from "./AdminUI";
+import { DataError, DataSection, EmptyRow, formatDate, formatMoney, Icon, StatusBadge, StatusSelect, Thumbnail } from "./AdminUI";
 import { ProductForm } from "./ProductForm";
 import { useAdminPermission } from "./useAdminPermission";
 
@@ -36,11 +36,28 @@ export function ProductManagement() {
       .select("id,title,price,stock_quantity,status,created_at,shop_id,category_id", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(100);
-    if (queryError) setError(`Unable to load products: ${queryError.message}`);
-    else {
-      setProducts((data ?? []) as Product[]);
-      setTotal(count ?? 0);
+    if (queryError) {
+      setError(`Unable to load products: ${queryError.message}`);
+      setLoading(false);
+      return;
     }
+    const rows = (data ?? []) as Product[];
+    const coverImages = new Map<string, string>();
+    if (rows.length) {
+      const { data: imageRows, error: imageError } = await supabase
+        .from("product_images")
+        .select("product_id,image_url")
+        .in("product_id", rows.map((product) => product.id))
+        .eq("media_type", "image")
+        .order("sort_order", { ascending: true });
+      // Thumbnails are optional, so a failure here still shows the catalog.
+      if (imageError) console.warn("Unable to load product thumbnails:", imageError.message);
+      for (const image of (imageRows ?? []) as { product_id: string; image_url: string }[]) {
+        if (!coverImages.has(image.product_id)) coverImages.set(image.product_id, image.image_url);
+      }
+    }
+    setProducts(rows.map((product) => ({ ...product, image_url: coverImages.get(product.id) ?? null })));
+    setTotal(count ?? 0);
     setLoading(false);
   }, []);
 
@@ -82,7 +99,7 @@ export function ProductManagement() {
             <tbody>
               {filteredProducts.map((product) => (
                 <tr key={product.id}>
-                  <td><strong>{product.title}</strong><small className={styles.subCell}>ID {product.id.slice(0, 8)}</small></td>
+                  <td><div className={styles.personCell}><Thumbnail name={product.title} src={product.image_url} /><div><strong>{product.title}</strong><small className={styles.subCell}>ID {product.id.slice(0, 8)}</small></div></div></td>
                   <td>{formatMoney(Number(product.price))}</td>
                   <td><span className={Number(product.stock_quantity) < 5 ? styles.lowStock : ""}>{product.stock_quantity} units</span></td>
                   <td><StatusBadge status={product.status} /></td>

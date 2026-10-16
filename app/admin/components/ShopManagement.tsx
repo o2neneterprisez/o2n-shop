@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Shop } from "../types";
 import styles from "../admin.module.css";
 import { useAdminContext } from "./AdminContext";
-import { DataError, DataSection, EmptyRow, formatDate, Icon, StatusBadge, StatusSelect } from "./AdminUI";
+import { DataError, DataSection, EmptyRow, formatDate, Icon, StatusBadge, StatusSelect, Thumbnail } from "./AdminUI";
 import { ShopForm } from "./ShopForm";
 import { useAdminPermission } from "./useAdminPermission";
 
@@ -33,7 +33,7 @@ export function ShopManagement() {
     setError(null);
     const { data, count, error: queryError } = await supabase
       .from("shops")
-      .select("id,name,status,contact_email,district,created_at,owner_id", { count: "exact" })
+      .select("id,name,status,contact_email,district,created_at,owner_id,logo_url", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (queryError) {
@@ -86,7 +86,7 @@ export function ShopManagement() {
             <tbody>
               {filteredShops.map((shop) => (
                 <tr key={shop.id}>
-                  <td><div className={styles.personCell}><span className={styles.shopAvatar}>{shop.name.slice(0, 1).toUpperCase()}</span><strong>{shop.name}</strong></div><small className={styles.subCell}>ID {shop.id.slice(0, 8)}</small></td>
+                  <td><div className={styles.personCell}><Thumbnail name={shop.name} src={shop.logo_url} /><div><strong>{shop.name}</strong><small className={styles.subCell}>ID {shop.id.slice(0, 8)}</small></div></div></td>
                   <td>{shop.district || "—"}</td>
                   <td>{shop.contact_email || "—"}</td>
                   <td><StatusBadge status={shop.status} /></td>
