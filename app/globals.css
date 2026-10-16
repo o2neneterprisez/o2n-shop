@@ -359,16 +359,85 @@ img {
   top: calc(100% + 9px);
   right: 0;
   z-index: 40;
-  display: grid;
-  width: max-content;
-  min-width: 210px;
-  max-width: min(280px, 85vw);
-  gap: 7px;
-  padding: 14px;
+  display: flex;
+  width: 260px;
+  min-width: 0;
+  max-width: min(300px, 85vw);
+  max-height: calc(100vh - 90px);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+  padding: 12px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 15px;
   background: #fff;
-  box-shadow: 0 14px 34px #19213b1f;
+  box-shadow: 0 16px 36px #19213b24;
+  overflow-y: auto;
+}
+
+.account-menu-heading {
+  display: block;
+  padding: 7px 10px 11px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.account-menu-item {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+  transition: background .16s ease, color .16s ease;
+}
+
+.account-menu-item:hover {
+  background: #f4f5fb;
+  color: #4d5ed7;
+}
+
+.account-menu-item svg,
+.account-menu-signout svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.account-menu-signout {
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 43px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 5px;
+  padding: 9px 10px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-menu-signout:hover {
+  color: #a62828;
+}
+
+.account-menu-signout:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .account-menu strong,
@@ -376,28 +445,8 @@ img {
   overflow-wrap: anywhere;
 }
 
-.account-menu span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.account-menu button {
-  margin-top: 6px;
-  padding: 9px 11px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: #fff;
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.account-menu button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
 .account-menu-error {
-  margin: 0;
+  margin: 2px 10px 6px;
   color: #a62828;
   font-size: 12px;
 }
@@ -1308,6 +1357,17 @@ img {
   margin: 4px 0 8px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.cart-line-copy .cart-line-variant {
+  display: inline-block;
+  margin: 6px 0 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f1f2ff;
+  color: #3d3a7a;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .cart-line-copy > strong,
@@ -2791,7 +2851,7 @@ img {
   height: 90px;
   min-width: 90px;
   border: 1px solid #e3e8ef;
-  border-radius: 50%;
+  border-radius: 10% !important;
 }
 
 .shop-cover {
@@ -3214,9 +3274,9 @@ img {
   }
 
   .shops-grid.is-grid .shop-avatar {
-    width: 68px;
-    height: 68px;
-    min-width: 68px;
+    width: 90px;
+    height: 90px;
+    min-width: 90px;
   }
 
   .shops-grid.is-list .shop-card {

@@ -23,6 +23,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
   const dispatch = useAppDispatch();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -36,6 +37,13 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
     setError(null);
     setMessage(null);
 
+    const requestedReturnPath = new URLSearchParams(window.location.search).get("next");
+    const returnPath = requestedReturnPath?.startsWith("/") &&
+      !requestedReturnPath.startsWith("//") &&
+      !requestedReturnPath.startsWith("/auth/")
+      ? requestedReturnPath
+      : null;
+
     if (!supabase || !isSupabaseConfigured) {
       setError("Authentication is not configured. Set the Supabase URL and public anon key to enable accounts.");
       return;
@@ -43,6 +51,10 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
 
     if ((mode === "signup" || mode === "update-password") && password !== confirmPassword) {
       setError("The passwords do not match.");
+      return;
+    }
+    if (mode === "signup" && !/^\d{10}$/.test(phone)) {
+      setError("Enter a 10-digit mobile number.");
       return;
     }
 
@@ -61,7 +73,7 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           .eq("id", data.user.id)
           .maybeSingle();
         if (profileError) throw profileError;
-        router.replace(profile?.role === "admin" || profile?.role === "super_admin" ? "/admin" : "/");
+        router.replace(returnPath ?? (profile?.role === "admin" || profile?.role === "super_admin" ? "/admin" : "/"));
         router.refresh();
         return;
       }
@@ -71,17 +83,23 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/login`,
+            emailRedirectTo: `${window.location.origin}/auth/login${returnPath ? `?next=${encodeURIComponent(returnPath)}` : ""}`,
             data: {
               full_name: fullName.trim(),
+              phone,
             },
           },
         });
-        if (authError) throw authError;
+        if (authError) {
+          if (authError.message.toLowerCase().includes("database error saving new user")) {
+            throw new Error("We couldn’t create your account. The mobile number may already be registered; check it and try again.");
+          }
+          throw authError;
+        }
         if (!data.user) throw new Error("The account was not created. Please try again.");
         if (data.session) {
           dispatch(setAuthUser(authUserFromSupabase(data.user)));
-          router.replace("/");
+          router.replace(returnPath ?? "/");
           router.refresh();
           return;
         }
@@ -142,6 +160,23 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+            ) : null}
+
+            {mode === "signup" ? (
+              <label>
+                Mobile number
+                <input
+                  autoComplete="tel-national"
+                  inputMode="numeric"
+                  maxLength={10}
+                  minLength={10}
+                  pattern="[0-9]{10}"
+                  required
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))}
                 />
               </label>
             ) : null}

@@ -11,6 +11,15 @@ export type MarketplaceShop = {
   created_at?: string;
 };
 
+export type MarketplaceVariant = {
+  id: string;
+  sku: string | null;
+  options: Record<string, string>;
+  price: number;
+  compare_at_price: number | null;
+  stock_quantity: number;
+};
+
 export type MarketplaceProduct = {
   id: string;
   title: string;
@@ -29,6 +38,7 @@ export type MarketplaceProduct = {
   warranty?: string | null;
   return_policy?: string | null;
   variant_options?: Array<{ name: string; options: string[] }>;
+  variants?: MarketplaceVariant[];
   created_at?: string;
 };
 
@@ -245,6 +255,37 @@ const mapCategory = (categoryId?: string | null, fallback = "Other") => {
   return "Other";
 };
 
+type VariantRow = {
+  id: string;
+  product_id: string;
+  sku: string | null;
+  options: Record<string, unknown> | null;
+  price: number | string;
+  compare_at_price: number | string | null;
+  stock_quantity: number | string;
+};
+
+function mapVariant(row: VariantRow): MarketplaceVariant {
+  return {
+    id: row.id,
+    sku: row.sku,
+    options: Object.fromEntries(
+      Object.entries(row.options ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    ),
+    price: Number(row.price),
+    compare_at_price: row.compare_at_price === null ? null : Number(row.compare_at_price),
+    stock_quantity: Number(row.stock_quantity),
+  };
+}
+
+/** Returns the variant whose options exactly match the shopper's selection, if any. */
+export function findMatchingVariant(product: MarketplaceProduct, selection: Record<string, string>) {
+  return product.variants?.find((variant) => {
+    const entries = Object.entries(variant.options);
+    return entries.length > 0 && entries.every(([name, value]) => selection[name] === value);
+  }) ?? null;
+}
+
 export async function getShopDirectoryData(): Promise<ShopDirectoryData> {
   if (!supabase) {
     throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
@@ -358,16 +399,29 @@ export async function getMarketplaceData() {
     const shopMap = new Map(shopRows.map((shop) => [shop.id, shop]));
     const categoryMap = new Map(categoryRows.map((category) => [category.id, category.name]));
 
-    const productImages = await supabase
-      .from("product_images")
-      .select("product_id,image_url,sort_order")
-      .in(
-        "product_id",
-        productRows.map((product) => product.id)
-      )
-      .order("sort_order", { ascending: true });
+    const productIds = productRows.map((product) => product.id);
+    const [productImages, productVariants] = await Promise.all([
+      supabase
+        .from("product_images")
+        .select("product_id,image_url,sort_order")
+        .in("product_id", productIds)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_variants")
+        .select("id,product_id,sku,options,price,compare_at_price,stock_quantity")
+        .in("product_id", productIds)
+        .order("created_at", { ascending: true }),
+    ]);
 
     if (productImages.error) throw productImages.error;
+    if (productVariants.error) throw productVariants.error;
+
+    const variantMap = new Map<string, MarketplaceVariant[]>();
+    for (const row of (productVariants.data ?? []) as VariantRow[]) {
+      const variants = variantMap.get(row.product_id) ?? [];
+      variants.push(mapVariant(row));
+      variantMap.set(row.product_id, variants);
+    }
 
     const imageMap = new Map<string, string[]>();
     const primaryImageMap = new Map<string, string>();
@@ -403,6 +457,7 @@ export async function getMarketplaceData() {
         warranty: product.warranty ?? "Not specified",
         return_policy: product.return_policy ?? "Check with seller",
         variant_options: Array.isArray(product.variant_options) ? product.variant_options : [],
+        variants: variantMap.get(product.id) ?? [],
         created_at: product.created_at,
       };
     });

@@ -44,10 +44,12 @@ function getProductImageStoragePath(imageUrl: string) {
 
 export function ShopForm({
   onClose,
+  onOwnerChange,
   onSaved,
   shopId,
 }: {
   onClose: () => void;
+  onOwnerChange?: (ownerId: string) => void;
   onSaved: (warning?: string) => void;
   shopId?: string;
 }) {
@@ -140,6 +142,10 @@ export function ShopForm({
     }, 0);
     return () => window.clearTimeout(timeout);
   }, [shopId]);
+
+  useEffect(() => {
+    onOwnerChange?.(ownerId);
+  }, [onOwnerChange, ownerId]);
 
   useEffect(() => () => {
     if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current);

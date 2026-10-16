@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { addBagItem, removeBagItem, removeBagProduct } from "@/lib/marketplace/cart";
+import { increaseBagLine, removeBagItem, removeBagProduct } from "@/lib/marketplace/cart";
 import { useBagItems } from "@/lib/marketplace/useBagItems";
 import { useAppDispatch } from "@/lib/store/hooks";
 import { getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
@@ -36,15 +36,25 @@ export function CartPage() {
   }, []);
 
   const bagProducts = useMemo(
-    () => Object.entries(bagItems).map(([id, quantity]) => ({
-      id,
-      quantity,
-      product: products.find((product) => product.id === id) ?? null,
-    })),
+    () => Object.entries(bagItems).map(([key, line]) => {
+      const product = products.find((item) => item.id === line.productId) ?? null;
+      const variant = line.variantId ? product?.variants?.find((item) => item.id === line.variantId) ?? null : null;
+      // A line whose variant no longer exists can't be priced, so treat it as unavailable.
+      const available = Boolean(product && (!line.variantId || variant));
+      return {
+        key,
+        id: line.productId,
+        quantity: line.quantity,
+        product: available ? product : null,
+        optionLabel: Object.entries(variant?.options ?? line.options).map(([name, value]) => `${name}: ${value}`).join(" · "),
+        price: variant?.price ?? product?.price ?? 0,
+        stock: variant?.stock_quantity ?? product?.stock_quantity ?? 0,
+      };
+    }),
     [bagItems, products],
   );
   const itemCount = bagProducts.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = bagProducts.reduce((sum, item) => sum + (item.product?.price ?? 0) * item.quantity, 0);
+  const subtotal = bagProducts.reduce((sum, item) => sum + (item.product ? item.price * item.quantity : 0), 0);
 
   return (
     <div className="cart-page">
@@ -73,8 +83,8 @@ export function CartPage() {
         {!loading && !error && bagProducts.length ? (
           <div className="cart-layout">
             <section aria-label="Items in your bag" className="cart-items">
-              {bagProducts.map(({ id, product, quantity }) => (
-                <article className="cart-line" key={id}>
+              {bagProducts.map(({ key, id, product, quantity, optionLabel, price, stock }) => (
+                <article className="cart-line" key={key}>
                   <div className="cart-line-image">
                     {product?.image
                       ? <Link aria-label={`View ${product.title}`} href={`/products/${encodeURIComponent(id)}`}><Image alt={product.title} height={128} src={product.image} unoptimized width={128} /></Link>
@@ -83,26 +93,27 @@ export function CartPage() {
                   <div className="cart-line-details">
                     <div className="cart-line-copy">
                       <h2>{product?.title ?? "Product unavailable"}</h2>
+                      {optionLabel ? <p className="cart-line-variant">{optionLabel}</p> : null}
                       <p>{product ? product.shopName ?? "O2N E-Mall" : "This listing is no longer available."}</p>
-                      {product ? <strong>₹{product.price.toLocaleString("en-IN")}</strong> : null}
+                      {product ? <strong>₹{price.toLocaleString("en-IN")}</strong> : null}
                     </div>
                     <div className="cart-line-controls">
                       {product ? (
                         <div aria-label={`Quantity for ${product.title}`} className="cart-quantity">
-                          <button aria-label={`Decrease quantity of ${product.title}`} onClick={() => dispatch(removeBagItem(id))} type="button">−</button>
+                          <button aria-label={`Decrease quantity of ${product.title}`} onClick={() => dispatch(removeBagItem(key))} type="button">−</button>
                           <span>{quantity}</span>
                           <button
                             aria-label={`Increase quantity of ${product.title}`}
-                            disabled={quantity >= product.stock_quantity}
-                            onClick={() => dispatch(addBagItem(id))}
+                            disabled={quantity >= stock}
+                            onClick={() => dispatch(increaseBagLine(key))}
                             type="button"
                           >+</button>
                         </div>
                       ) : <span className="cart-unavailable">Unavailable</span>}
-                      <button className="cart-remove" onClick={() => dispatch(removeBagProduct(id))} type="button">Remove</button>
+                      <button className="cart-remove" onClick={() => dispatch(removeBagProduct(key))} type="button">Remove</button>
                     </div>
                   </div>
-                  {product ? <strong className="cart-line-total">₹{(product.price * quantity).toLocaleString("en-IN")}</strong> : null}
+                  {product ? <strong className="cart-line-total">₹{(price * quantity).toLocaleString("en-IN")}</strong> : null}
                 </article>
               ))}
             </section>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { searchMarketplace, type MarketplaceSearchSuggestion } from "@/lib/supabase/api";
@@ -16,11 +16,48 @@ const getServerSnapshot = () => false;
 
 function AccountControl() {
   const isClient = useSyncExternalStore(subscribeToNothing, getClientSnapshot, getServerSnapshot);
+  const pathname = usePathname();
   const user = useAppSelector((state) => state.auth.user);
   const initialized = useAppSelector((state) => state.auth.initialized);
   const dispatch = useAppDispatch();
+  const accountControlRef = useRef<HTMLDetailsElement>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ userId: string; role: string | null; error: string | null } | null>(null);
+  const userId = user?.id;
+
+  useEffect(() => {
+    const closeWhenOutside = (event: PointerEvent) => {
+      const accountControl = accountControlRef.current;
+      if (accountControl && !accountControl.contains(event.target as Node)) accountControl.open = false;
+    };
+
+    document.addEventListener("pointerdown", closeWhenOutside);
+    return () => document.removeEventListener("pointerdown", closeWhenOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!initialized || !userId || !supabase || !isSupabaseConfigured) return;
+
+    let active = true;
+    void supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data, error: queryError }) => {
+        if (!active) return;
+        setProfile({
+          userId,
+          role: queryError ? null : data?.role ?? null,
+          error: queryError ? `Unable to load your account role: ${queryError.message}` : null,
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialized, userId]);
 
   if (!isClient || !initialized) {
     return (
@@ -49,7 +86,7 @@ function AccountControl() {
   };
 
   return (
-    <details className="account-control">
+    <details className="account-control" ref={accountControlRef}>
       <summary className="account-avatar" aria-label={`Account: ${user.displayName ?? user.email ?? "User"}`}>
         {user.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -59,16 +96,34 @@ function AccountControl() {
         )}
       </summary>
       <div className="account-menu">
-        <strong>{user.displayName ?? "Your account"}</strong>
-        {user.email ? <span>{user.email}</span> : null}
+        <strong className="account-menu-heading">Your Account</strong>
+        {pathname === "/" && profile?.userId === user.id && profile.role && profile.role !== "customer"
+          ? (
+            <Link className="account-menu-item" href="/admin">
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" />
+                <rect x="13" y="3" width="8" height="5" rx="1.5" />
+                <rect x="13" y="10" width="8" height="11" rx="1.5" />
+                <rect x="3" y="13" width="8" height="8" rx="1.5" />
+              </svg>
+              <span>Admin panel</span>
+            </Link>
+          )
+          : null}
+        {profile?.userId === user.id && profile.error ? <p className="account-menu-error" role="alert">{profile.error}</p> : null}
         {error ? <p className="account-menu-error" role="alert">{error}</p> : null}
         <button
+          className="account-menu-signout"
           type="button"
           disabled={isSigningOut}
           onClick={() => {
             void signOut();
           }}
         >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M10 17l5-5-5-5M15 12H3" />
+            <path d="M12 3h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-6" />
+          </svg>
           {isSigningOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
@@ -246,7 +301,7 @@ export function MarketplaceHeader({
 }) {
   const router = useRouter();
   const bagItems = useAppSelector((state) => state.cart.items);
-  const bagCount = Object.values(bagItems).reduce((sum, quantity) => sum + quantity, 0);
+  const bagCount = Object.values(bagItems).reduce((sum, line) => sum + line.quantity, 0);
 
   return (
     <header className="nav">
