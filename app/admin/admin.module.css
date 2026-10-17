@@ -977,6 +977,29 @@
   color: #48a88e;
 }
 
+.sellerShopList {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sellerShopList li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sellerShopName {
+  overflow: hidden;
+  max-width: 180px;
+  color: #4a4e61;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rowActions {
   display: flex;
   gap: 4px;
@@ -1185,6 +1208,127 @@
 .formField select:focus {
   border-color: #9aa5fa;
   box-shadow: 0 0 0 3px #6676f416;
+}
+
+.formField > .fieldLabel {
+  color: #676c7e;
+  font-weight: 600;
+}
+
+.sellerPicker {
+  position: relative;
+}
+
+.sellerPickerInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: #a5a9b7;
+}
+
+.sellerPickerInput > svg {
+  position: absolute;
+  left: 11px;
+  pointer-events: none;
+}
+
+.formField .sellerPickerInput input {
+  padding-right: 34px;
+  padding-left: 33px;
+}
+
+.formField .sellerPickerInput input::placeholder {
+  color: #9da1b0;
+}
+
+.sellerPickerClear {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #9da1b0;
+  cursor: pointer;
+}
+
+.sellerPickerClear:hover {
+  background: #f3f4f8;
+  color: #5c6376;
+}
+
+.formField > .sellerPickerMeta,
+.sellerPickerMeta {
+  display: block;
+  margin-top: 4px;
+  color: #a5a9b7;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.sellerPickerList {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  max-height: 240px;
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid #e7e9f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 30px #1b214722;
+  list-style: none;
+}
+
+.sellerPickerOption {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1px 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sellerPickerOption strong {
+  overflow: hidden;
+  color: #4a4e61;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sellerPickerOption small {
+  grid-column: 1;
+  overflow: hidden;
+  color: #9da1b0;
+  font-size: 10px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sellerPickerOption svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--admin-blue);
+}
+
+.sellerPickerOptionActive {
+  background: #f1f2ff;
+}
+
+.sellerPickerEmpty {
+  padding: 10px;
+  color: #9da1b0;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .productInputPair {

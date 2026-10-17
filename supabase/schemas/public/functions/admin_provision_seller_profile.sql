@@ -28,6 +28,13 @@ BEGIN
     RAISE EXCEPTION 'Seller account not found';
   END IF;
 
+  IF EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = p_seller_id AND role IN ('admin', 'fse', 'super_admin')
+  ) THEN
+    RAISE EXCEPTION 'This account belongs to a staff member and cannot be made a seller';
+  END IF;
+
   INSERT INTO public.profiles (id, display_name, phone, role)
   VALUES (p_seller_id, btrim(p_display_name), NULLIF(btrim(p_phone), ''), 'seller')
   ON CONFLICT (id) DO UPDATE

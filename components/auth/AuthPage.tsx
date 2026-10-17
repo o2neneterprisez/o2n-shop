@@ -66,14 +66,32 @@ export function AuthPage({ mode }: { mode: AuthMode }) {
           password,
         });
         if (authError) throw authError;
-        dispatch(setAuthUser(authUserFromSupabase(data.user)));
-        const { data: profile, error: profileError } = await supabase
+        const { data: initialProfile, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("id", data.user.id)
           .maybeSingle();
         if (profileError) throw profileError;
-        router.replace(returnPath ?? (profile?.role && ["admin", "fse", "super_admin"].includes(profile.role) ? "/admin" : "/"));
+        let role = initialProfile?.role ?? null;
+        const isDesignatedOwner = data.user.email?.trim().toLowerCase() === "o2nenterprisez@gmail.com";
+        if (isDesignatedOwner && !initialProfile) {
+          throw new Error("Your account profile is missing. Contact support to restore administrator access.");
+        }
+        if (isDesignatedOwner && role && !["admin", "fse", "super_admin"].includes(role)) {
+          const { error: setupError } = await supabase.rpc("claim_initial_super_admin");
+          if (setupError) {
+            throw new Error(`Your account is signed in but admin access could not be initialized: ${setupError.message}`);
+          }
+          const { data: refreshedProfile, error: refreshedProfileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .maybeSingle();
+          if (refreshedProfileError) throw refreshedProfileError;
+          role = refreshedProfile?.role ?? null;
+        }
+        dispatch(setAuthUser(authUserFromSupabase(data.user)));
+        router.replace(returnPath ?? (role && ["admin", "fse", "super_admin"].includes(role) ? "/admin" : "/"));
         router.refresh();
         return;
       }

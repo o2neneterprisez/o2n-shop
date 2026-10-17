@@ -5,8 +5,8 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { supabase } from "@/lib/supabase/client";
 import styles from "../admin.module.css";
 import { Icon } from "./AdminUI";
+import { SellerPicker, type SellerOption } from "./SellerPicker";
 
-type SellerOption = { id: string; display_name: string | null; email?: string };
 type ExistingShop = {
   id: string;
   owner_id: string;
@@ -57,12 +57,7 @@ export function ShopForm({
   const [sellers, setSellers] = useState<SellerOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ownerInviteMessage, setOwnerInviteMessage] = useState<string | null>(null);
-  const [showOwnerForm, setShowOwnerForm] = useState(false);
-  const [newOwnerName, setNewOwnerName] = useState("");
-  const [newOwnerEmail, setNewOwnerEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState("");
   const [name, setName] = useState("");
@@ -93,7 +88,7 @@ export function ShopForm({
         }
         try {
           const [sellerResult, authResult, shopResult] = await Promise.all([
-            supabase.from("profiles").select("id,display_name").eq("role", "seller").order("display_name"),
+            supabase.from("profiles").select("id,display_name,email").eq("role", "seller").order("display_name"),
             supabase.auth.getUser(),
             shopId
               ? supabase.from("shops").select("id,owner_id,name,slug,description,contact_email,phone,address,district,state,logo_url,latitude,longitude,status").eq("id", shopId).maybeSingle()
@@ -102,10 +97,9 @@ export function ShopForm({
           if (sellerResult.error) throw new Error(`Unable to load sellers: ${sellerResult.error.message}`);
           const loadedSellers = (sellerResult.data ?? []) as SellerOption[];
           setSellers(loadedSellers);
-          if (!shopId && !loadedSellers.length) setShowOwnerForm(true);
           if (authResult.error) {
             const message = authResult.error.message === "Auth session missing!"
-              ? "Your admin session has expired. Sign in again before creating a shop or inviting an owner."
+              ? "Your admin session has expired. Sign in again before creating a shop."
               : `Unable to verify your session: ${authResult.error.message}`;
             throw new Error(message);
           }
@@ -130,7 +124,7 @@ export function ShopForm({
             setLogoPreview(shop.logo_url ?? "");
             setStatus(shop.status);
             if (!sellerResult.data?.some((seller) => seller.id === shop.owner_id)) {
-              setSellers((sellerResult.data ?? []).concat([{ id: shop.owner_id, display_name: "Current owner" }]) as SellerOption[]);
+              setSellers([...loadedSellers, { id: shop.owner_id, display_name: "Current owner", email: null }]);
             }
           }
         } catch (loadError) {
@@ -170,59 +164,6 @@ export function ShopForm({
     setLogoFile(file);
     setLogoPreview(preview);
     setRemoveLogo(false);
-  }
-
-  async function inviteShopOwner() {
-    if (!supabase) {
-      setError("Supabase is not configured.");
-      return;
-    }
-    if (newOwnerName.trim().length < 2 || newOwnerName.trim().length > 120) {
-      setError("Enter an owner name between 2 and 120 characters.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newOwnerEmail.trim()) || newOwnerEmail.trim().length > 254) {
-      setError("Enter a valid owner email address.");
-      return;
-    }
-    setInviting(true);
-    setError(null);
-    setOwnerInviteMessage(null);
-    try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw new Error(`Unable to verify your session: ${sessionError.message}`);
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) throw new Error("Your session has expired. Sign in again to invite a shop owner.");
-
-      const response = await fetch("/api/admin/shop-owners", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ displayName: newOwnerName.trim(), email: newOwnerEmail.trim() }),
-      });
-      const result = await response.json() as {
-        seller?: { id: string; displayName: string; email: string };
-        error?: string;
-      };
-      if (!response.ok) throw new Error(result.error ?? "Unable to invite the shop owner.");
-      if (!result.seller) throw new Error("The invitation succeeded, but no seller account was returned.");
-
-      const seller = result.seller;
-      setSellers((current) => current.some((item) => item.id === seller.id)
-        ? current
-        : [...current, { id: seller.id, display_name: seller.displayName, email: seller.email }]);
-      setOwnerId(seller.id);
-      setNewOwnerName("");
-      setNewOwnerEmail("");
-      setShowOwnerForm(false);
-      setOwnerInviteMessage(`Invitation sent to ${seller.email}. They are now selected as this shop’s owner.`);
-    } catch (inviteError) {
-      setError(errorMessage(inviteError));
-    } finally {
-      setInviting(false);
-    }
   }
 
   async function removeUploadedLogo(paths: string[]) {
@@ -348,38 +289,13 @@ export function ShopForm({
                 if (!slugEdited) setSlug(slugify(event.target.value));
               }} required value={name} />
             </label>
-            <label className={styles.formField}>Shop owner (required)
-              <select disabled={loading || inviting} onChange={(event) => setOwnerId(event.target.value)} required value={ownerId}>
-                <option value="">Select a seller</option>
-                {sellers.map((seller) => <option key={seller.id} value={seller.id}>{seller.display_name || `Seller ${seller.id.slice(0, 8)}`}</option>)}
-              </select>
+            <div className={styles.formField}>
+              <span className={styles.fieldLabel} id="shop-owner-label">Shop owner (required)</span>
+              <SellerPicker disabled={loading} labelledBy="shop-owner-label" onChange={setOwnerId} sellers={sellers} value={ownerId} />
               {!editing && !loading && !sellers.length
-                ? <span>No seller accounts are available yet. Invite an owner below; they will be selected automatically.</span>
+                ? <span>No seller accounts are available yet. Add one on the Sellers page first.</span>
                 : null}
-            </label>
-            {!editing ? (
-              <div className={styles.formField}>
-                <span>Need a new owner?</span>
-                <button className={styles.secondaryButton} disabled={loading || inviting} onClick={() => {
-                  setShowOwnerForm((shown) => !shown);
-                  setError(null);
-                }} type="button"><Icon name={showOwnerForm ? "close" : "plus"} size={15} /> {showOwnerForm ? "Cancel invite" : "Add shop owner"}</button>
-              </div>
-            ) : null}
-            {!editing && showOwnerForm ? (
-              <div className={`${styles.shopOwnerInvite} ${styles.productFieldWide}`}>
-                <div className={styles.productSectionHeading}>
-                  <h3>Invite a shop owner</h3>
-                  <p>We’ll create a seller account and email them a secure link to set their password.</p>
-                </div>
-                <div className={styles.productFormGrid}>
-                  <label className={styles.formField}>Owner name<input autoComplete="name" maxLength={120} minLength={2} onChange={(event) => setNewOwnerName(event.target.value)} value={newOwnerName} /></label>
-                  <label className={styles.formField}>Owner email<input autoComplete="email" maxLength={254} onChange={(event) => setNewOwnerEmail(event.target.value)} type="email" value={newOwnerEmail} /></label>
-                </div>
-                <button className={styles.secondaryButton} disabled={inviting || loading} onClick={() => void inviteShopOwner()} type="button">{inviting ? "Sending invitation…" : "Send invite and select owner"}</button>
-              </div>
-            ) : null}
-            {ownerInviteMessage ? <p className={`${styles.productFieldWide} ${styles.shopInviteSuccess}`} role="status">{ownerInviteMessage}</p> : null}
+            </div>
             <label className={styles.formField}>URL slug
               <input disabled={loading} maxLength={120} onChange={(event) => { setSlugEdited(true); setSlug(slugify(event.target.value)); }} required value={slug} />
             </label>
@@ -424,7 +340,7 @@ export function ShopForm({
             {editing
               ? "Shop status is managed separately."
               : !ownerId
-                ? "Select an existing seller or invite a new owner before creating the shop."
+                ? "Select the seller who will own this shop."
                 : !userId
                   ? "Sign in again before creating the shop."
                   : "New shops are created with pending status."}

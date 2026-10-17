@@ -4,20 +4,15 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
   SECURITY DEFINER
   SET search_path TO ''
   AS $function$
-declare
-  phone_value text;
 begin
- phone_value := nullif(regexp_replace(trim(coalesce(new.phone, new.raw_user_meta_data ->> 'phone', '')), '\D', '', 'g'), '');
- if phone_value is not null and phone_value !~ '^[0-9]{10}$' then
-   raise exception 'Mobile number must contain exactly 10 digits';
- end if;
-
- insert into public.profiles (id, display_name, phone, avatar_url)
+ insert into public.profiles (id, display_name, avatar_url, phone, role, email)
  values (
    new.id,
    nullif(trim(coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', '')), ''),
-   phone_value,
-   nullif(new.raw_user_meta_data ->> 'avatar_url', '')
+   nullif(new.raw_user_meta_data ->> 'avatar_url', ''),
+   nullif(trim(coalesce(new.raw_user_meta_data ->> 'phone', '')), ''),
+   case when new.raw_user_meta_data ->> 'account_type' = 'seller' then 'seller' else 'customer' end,
+   new.email
  )
  on conflict (id) do nothing;
  return new;
