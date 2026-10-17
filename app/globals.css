@@ -383,6 +383,25 @@ img {
   font-weight: 800;
 }
 
+.account-menu-identity {
+  display: grid;
+  gap: 2px;
+  margin: -4px 0 6px;
+  padding: 0 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.account-menu .account-menu-name {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.account-menu .account-menu-email {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .account-menu-item {
   display: flex;
   flex: 0 0 auto;

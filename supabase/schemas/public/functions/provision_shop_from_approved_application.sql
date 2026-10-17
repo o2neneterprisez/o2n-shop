@@ -26,9 +26,12 @@ begin
     insert into public.profiles (id, display_name, phone, role)
     values (new.owner_id, coalesce(new.contact_name, new.business_name), new.phone, 'seller')
     on conflict (id) do update set
-      display_name = coalesce(excluded.display_name, public.profiles.display_name),
-      phone = coalesce(excluded.phone, public.profiles.phone),
-      role = 'seller',
+      display_name = coalesce(public.profiles.display_name, excluded.display_name),
+      phone = coalesce(public.profiles.phone, excluded.phone),
+      role = case
+        when public.profiles.role in ('admin', 'fse', 'super_admin') then public.profiles.role
+        else 'seller'
+      end,
       updated_at = now();
   end if;
   return new;

@@ -7,6 +7,7 @@ CREATE TABLE "public"."profiles" (
   "created_at"           timestamp with time zone NOT NULL DEFAULT now(),
   "updated_at"           timestamp with time zone NOT NULL DEFAULT now(),
   "must_change_password" boolean                  NOT NULL DEFAULT false,
+  "email"                text,
   CONSTRAINT "profiles_id_fkey" FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE,
   CONSTRAINT "profiles_pkey" PRIMARY KEY (id),
   CONSTRAINT "profiles_role_check" CHECK ((role = ANY (ARRAY['customer'::text, 'seller'::text, 'fse'::text, 'admin'::text, 'super_admin'::text])))

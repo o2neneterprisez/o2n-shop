@@ -129,10 +129,30 @@ export async function GET(request: Request) {
     if (data.users.length < perPage) break;
   }
 
+  const sellerIds = (profiles ?? []).map((profile) => profile.id);
+  const shopsByOwner = new Map<string, { id: string; name: string; status: string }[]>();
+  if (sellerIds.length) {
+    const { data: shops, error: shopsError } = await authorization.client
+      .from("shops")
+      .select("id,name,status,owner_id")
+      .in("owner_id", sellerIds)
+      .order("name");
+    if (shopsError) {
+      console.error("Unable to load seller shops:", shopsError.message);
+      return jsonError("Unable to load the sellers' shops.", 500);
+    }
+    for (const shop of shops ?? []) {
+      const ownerShops = shopsByOwner.get(shop.owner_id) ?? [];
+      ownerShops.push({ id: shop.id, name: shop.name, status: shop.status });
+      shopsByOwner.set(shop.owner_id, ownerShops);
+    }
+  }
+
   return Response.json({
     sellers: (profiles ?? []).map((profile) => ({
       ...profile,
       email: usersById.get(profile.id)?.email ?? null,
+      shops: shopsByOwner.get(profile.id) ?? [],
     })),
   });
 }

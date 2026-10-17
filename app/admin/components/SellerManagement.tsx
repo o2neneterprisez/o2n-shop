@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase/client";
 import styles from "../admin.module.css";
 import { useAdminContext } from "./AdminContext";
-import { DataError, DataSection, EmptyRow, formatDate, Icon } from "./AdminUI";
+import { DataError, DataSection, EmptyRow, formatDate, Icon, StatusBadge } from "./AdminUI";
 import { useAdminPermission } from "./useAdminPermission";
 
 type Seller = {
@@ -13,6 +14,7 @@ type Seller = {
   phone: string | null;
   email: string | null;
   created_at: string;
+  shops?: { id: string; name: string; status: string }[];
 };
 
 type SellerFormValues = {
@@ -78,7 +80,7 @@ export function SellerManagement() {
 
   const filteredSellers = useMemo(
     () => sellers.filter((seller) =>
-      `${seller.display_name ?? ""} ${seller.email ?? ""} ${seller.phone ?? ""} ${seller.id}`
+      `${seller.display_name ?? ""} ${seller.email ?? ""} ${seller.phone ?? ""} ${seller.id} ${seller.shops?.map((shop) => shop.name).join(" ") ?? ""}`
         .toLowerCase()
         .includes(search.toLowerCase()),
     ),
@@ -137,7 +139,8 @@ export function SellerManagement() {
       if (!result.seller) throw new Error("The seller was saved, but no seller details were returned.");
       setFormSeller(undefined);
       setSellers((current) => editing
-        ? current.map((seller) => seller.id === result.seller?.id ? result.seller! : seller)
+        // Create/update responses don't include shops, so keep the ones already loaded.
+        ? current.map((seller) => seller.id === result.seller?.id ? { ...result.seller!, shops: seller.shops } : seller)
         : [result.seller!, ...current]);
       setSuccessMessage(editing ? "Seller details updated." : `Invitation sent to ${result.seller.email ?? formValues.email}.`);
     } catch (saveError) {
@@ -163,7 +166,7 @@ export function SellerManagement() {
           : null}
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead><tr><th>Seller</th><th>Email</th><th>Phone</th><th>Joined</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Seller</th><th>Email</th><th>Phone</th><th>Shops</th><th>Joined</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredSellers.map((seller) => (
                 <tr key={seller.id}>
@@ -176,6 +179,21 @@ export function SellerManagement() {
                   </td>
                   <td>{seller.email || "—"}</td>
                   <td>{seller.phone || "—"}</td>
+                  <td>
+                    {seller.shops?.length ? (
+                      <ul className={styles.sellerShopList}>
+                        {seller.shops.map((shop) => (
+                          <li key={shop.id}>
+                            <span className={styles.sellerShopName}>{shop.name}</span>
+                            <StatusBadge status={shop.status} />
+                            <Link aria-label={`Edit shop ${shop.name}`} className={styles.iconButton} href={`/admin/shops/${encodeURIComponent(shop.id)}`} title="Edit shop">
+                              <Icon name="edit" size={15} />
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : <span className={styles.muted}>No shop yet</span>}
+                  </td>
                   <td>{formatDate(seller.created_at)}</td>
                   <td>
                     <div className={styles.rowActions}>
@@ -187,9 +205,9 @@ export function SellerManagement() {
                 </tr>
               ))}
               {!loading && !filteredSellers.length
-                ? <EmptyRow columns={5} label={error ? "Seller data could not be loaded." : "No sellers match your search."} />
+                ? <EmptyRow columns={6} label={error ? "Seller data could not be loaded." : "No sellers match your search."} />
                 : null}
-              {loading || permissionLoading ? <EmptyRow columns={5} label="Loading sellers…" /> : null}
+              {loading || permissionLoading ? <EmptyRow columns={6} label="Loading sellers…" /> : null}
             </tbody>
           </table>
         </div>

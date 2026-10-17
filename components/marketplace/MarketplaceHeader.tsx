@@ -23,7 +23,7 @@ function AccountControl() {
   const accountControlRef = useRef<HTMLDetailsElement>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ userId: string; role: string | null; error: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ userId: string; role: string | null; displayName: string | null; error: string | null } | null>(null);
   const userId = user?.id;
 
   useEffect(() => {
@@ -42,7 +42,7 @@ function AccountControl() {
     let active = true;
     void supabase
       .from("profiles")
-      .select("role")
+      .select("role,display_name")
       .eq("id", userId)
       .maybeSingle()
       .then(({ data, error: queryError }) => {
@@ -50,6 +50,7 @@ function AccountControl() {
         setProfile({
           userId,
           role: queryError ? null : data?.role ?? null,
+          displayName: queryError ? null : data?.display_name ?? null,
           error: queryError ? `Unable to load your account role: ${queryError.message}` : null,
         });
       });
@@ -97,6 +98,34 @@ function AccountControl() {
       </summary>
       <div className="account-menu">
         <strong className="account-menu-heading">Your Account</strong>
+        <div className="account-menu-identity">
+          <span className="account-menu-name">
+            {user.displayName || (profile?.userId === user.id ? profile.displayName : null) || "O2N shopper"}
+          </span>
+          {user.email ? <span className="account-menu-email">{user.email}</span> : null}
+        </div>
+        <Link className="account-menu-item" href="/account/profile">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M4.5 20c.7-3.3 3.5-5.5 7.5-5.5s6.8 2.2 7.5 5.5" />
+          </svg>
+          <span>My profile</span>
+        </Link>
+        <Link className="account-menu-item" href="/account/orders">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M6 3h12l1 5H5l1-5Z" />
+            <path d="M5 8h14v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8Z" />
+            <path d="M9 12h6" />
+          </svg>
+          <span>My orders</span>
+        </Link>
+        <Link className="account-menu-item" href="/account/addresses">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z" />
+            <circle cx="12" cy="9.5" r="2.5" />
+          </svg>
+          <span>My addresses</span>
+        </Link>
         {pathname === "/" && profile?.userId === user.id && profile.role && profile.role !== "customer"
           ? (
             <Link className="account-menu-item" href="/admin">
