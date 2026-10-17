@@ -410,6 +410,59 @@ function matchesCategorySearch(category: string | undefined, query: string) {
   );
 }
 
+/** Product tile used on the homepage, category pages and related-product lists. */
+export function ProductCard({
+  product,
+  onAddToBag,
+  onOpenProduct,
+}: {
+  product: MarketplaceProduct;
+  onAddToBag: (productId: string) => void;
+  onOpenProduct: (productId: string) => void;
+}) {
+  const discount = product.compare_at_price && product.compare_at_price > product.price
+    ? Math.round((1 - product.price / product.compare_at_price) * 100)
+    : 0;
+  const hasOptions = Boolean(product.variants?.length) ||
+    Boolean(product.variant_options?.some((variant) => variant.options.length > 0));
+  const variantPrices = product.variants?.map((variant) => variant.price) ?? [];
+  const lowestPrice = variantPrices.length ? Math.min(...variantPrices) : product.price;
+
+  return (
+    <article className="product">
+      <div className="visual open-detail" onClick={() => onOpenProduct(product.id)}>
+        {product.image ? (
+          <img src={product.image} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          "👕"
+        )}
+      </div>
+
+      <div className="pinfo">
+        <span className="pill">Verified listing</span>
+        <h3 className="open-detail" onClick={() => onOpenProduct(product.id)}>{product.title}</h3>
+        <div className="price">
+          {variantPrices.length && variantPrices.some((value) => value !== lowestPrice) ? "From " : ""}
+          ₹{lowestPrice.toLocaleString("en-IN")}
+        </div>
+        {discount > 0 ? (
+          <small style={{ color: "#16834a", fontWeight: 800 }}>
+            {discount}% OFF · <s style={{ color: "#7a8192" }}>₹{Number(product.compare_at_price ?? 0).toLocaleString("en-IN")}</s>
+          </small>
+        ) : null}
+        <small>{product.shopName}</small>
+        <button
+          type="button"
+          className="btn primary addbag"
+          onClick={() => (hasOptions ? onOpenProduct(product.id) : onAddToBag(product.id))}
+        >
+          {hasOptions ? "Choose options" : "Add to bag"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export function ProductSection({
   products,
   onAddToBag,
@@ -492,49 +545,9 @@ export function ProductSection({
         </div>
       ) : (
         <div className="productgrid">
-          {sortedProducts.map((product) => {
-            const discount = product.compare_at_price && product.compare_at_price > product.price
-              ? Math.round((1 - product.price / product.compare_at_price) * 100)
-              : 0;
-            const hasOptions = Boolean(product.variants?.length) ||
-              Boolean(product.variant_options?.some((variant) => variant.options.length > 0));
-            const variantPrices = product.variants?.map((variant) => variant.price) ?? [];
-            const lowestPrice = variantPrices.length ? Math.min(...variantPrices) : product.price;
-
-            return (
-              <article key={product.id} className="product">
-                <div className="visual open-detail" onClick={() => onOpenProduct(product.id)}>
-                  {product.image ? (
-                    <img src={product.image} alt={product.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    "👕"
-                  )}
-                </div>
-
-                <div className="pinfo">
-                  <span className="pill">Verified listing</span>
-                  <h3 className="open-detail" onClick={() => onOpenProduct(product.id)}>{product.title}</h3>
-                  <div className="price">
-                    {variantPrices.length && variantPrices.some((value) => value !== lowestPrice) ? "From " : ""}
-                    ₹{lowestPrice.toLocaleString("en-IN")}
-                  </div>
-                  {discount > 0 ? (
-                    <small style={{ color: "#16834a", fontWeight: 800 }}>
-                      {discount}% OFF · <s style={{ color: "#7a8192" }}>₹{Number(product.compare_at_price ?? 0).toLocaleString("en-IN")}</s>
-                    </small>
-                  ) : null}
-                  <small>{product.shopName}</small>
-                  <button
-                    type="button"
-                    className="btn primary addbag"
-                    onClick={() => (hasOptions ? onOpenProduct(product.id) : onAddToBag(product.id))}
-                  >
-                    {hasOptions ? "Choose options" : "Add to bag"}
-                  </button>
-                </div>
-              </article>
-            );
-          })}
+          {sortedProducts.map((product) => (
+            <ProductCard key={product.id} product={product} onAddToBag={onAddToBag} onOpenProduct={onOpenProduct} />
+          ))}
         </div>
       )}
     </section>

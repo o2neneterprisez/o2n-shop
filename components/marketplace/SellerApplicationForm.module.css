@@ -183,3 +183,78 @@
     width: 100%;
   }
 }
+
+.optionalText {
+  color: #8a90a3;
+  font-weight: 500;
+}
+
+.logoField {
+  display: grid;
+  gap: 9px;
+  color: #252b42;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logoPreview {
+  display: grid;
+  overflow: hidden;
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+  place-items: center;
+  border: 1px dashed #cfd2e0;
+  border-radius: 18px;
+  background: #f6f6fc;
+  font-size: 30px;
+}
+
+.logoPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logoActions {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.logoButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoActions small {
+  overflow: hidden;
+  color: #777e92;
+  font-size: 12px;
+  font-weight: 450;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeLogo {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #a62828;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logoInput {
+  display: none;
+}

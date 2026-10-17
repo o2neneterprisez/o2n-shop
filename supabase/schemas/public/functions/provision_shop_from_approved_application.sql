@@ -15,11 +15,11 @@ begin
 
     insert into public.shops (
       owner_id, name, slug, contact_email, phone, address, district, state,
-      status, latitude, longitude
+      status, latitude, longitude, logo_url
     ) values (
       new.owner_id, new.business_name, final_slug, new.email, new.phone,
       new.address, new.district, coalesce(nullif(new.state, ''), 'Jharkhand'),
-      'approved', new.latitude, new.longitude
+      'approved', new.latitude, new.longitude, new.logo_url
     )
     on conflict (slug) do nothing;
 

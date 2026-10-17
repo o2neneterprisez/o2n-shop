@@ -1,0 +1,107 @@
+/* Lines up with the product panels above (.detailwrap: 1080px wide, 16px side padding). */
+.section {
+  width: 100%;
+  max-width: 1080px;
+  margin: 10px auto 48px;
+  padding: 0 16px;
+  scroll-margin-top: 90px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.head h2 {
+  margin: 0;
+  color: #19213b;
+  font-size: clamp(20px, 3vw, 26px);
+  letter-spacing: -.03em;
+}
+
+.head p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.count {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.pagination ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagination button {
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #20194f;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pagination button:hover:not(:disabled) {
+  border-color: #c9c3fb;
+  background: #f6f5ff;
+}
+
+.pagination button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.pagination .active {
+  border-color: #5b4be7;
+  background: #5b4be7;
+  color: #fff;
+}
+
+.pagination .active:hover:not(:disabled) {
+  background: #5b4be7;
+}
+
+@media (max-width: 520px) {
+  .section {
+    margin-bottom: 32px;
+    padding: 0 12px;
+  }
+
+  .head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pagination button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+}
