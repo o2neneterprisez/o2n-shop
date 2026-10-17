@@ -9,6 +9,7 @@ type ApplicationBody = {
   district?: unknown;
   state?: unknown;
   notes?: unknown;
+  logoUrl?: unknown;
 };
 
 type TextValidation = { ok: true; value: string } | { ok: false; error: string };
@@ -77,6 +78,16 @@ export async function POST(request: Request) {
     return jsonError("Enter a valid phone number with 7 to 15 digits.", 400);
   }
 
+  // The logo is optional, but must be a file the applicant uploaded to their own storage folder.
+  let logoUrl: string | null = null;
+  if (body.logoUrl !== undefined && body.logoUrl !== null && body.logoUrl !== "") {
+    const ownFolder = `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/product-images/${authData.user.id}/`;
+    if (typeof body.logoUrl !== "string" || body.logoUrl.length > 1000 || !body.logoUrl.startsWith(ownFolder) || body.logoUrl.includes("..")) {
+      return jsonError("The shop logo upload is not valid. Please choose the image again.", 400);
+    }
+    logoUrl = body.logoUrl;
+  }
+
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -90,6 +101,7 @@ export async function POST(request: Request) {
     district: district.value,
     state: state.value,
     notes: notes.value,
+    logo_url: logoUrl,
     status: "pending",
   });
 

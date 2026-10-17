@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { searchMarketplace, type MarketplaceSearchSuggestion } from "@/lib/supabase/api";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase/client";
+import { useBagItems } from "@/lib/marketplace/useBagItems";
 import { setAuthUser } from "@/lib/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 
@@ -329,7 +330,7 @@ export function MarketplaceHeader({
   showSearch?: boolean;
 }) {
   const router = useRouter();
-  const bagItems = useAppSelector((state) => state.cart.items);
+  const bagItems = useBagItems();
   const bagCount = Object.values(bagItems).reduce((sum, line) => sum + line.quantity, 0);
 
   return (

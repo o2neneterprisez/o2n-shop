@@ -6,12 +6,25 @@ import { addBagItem, bagLineKey } from "@/lib/marketplace/cart";
 import { useBagItems } from "@/lib/marketplace/useBagItems";
 import { findMatchingVariant, getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
 import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
+import { RelatedProducts } from "@/components/marketplace/RelatedProducts";
 import { useAppDispatch } from "@/lib/store/hooks";
+
+const RELATED_LIMIT = 24;
+
+/** Same category first, then other listings from the same shop, newest first within each. */
+function pickRelatedProducts(product: MarketplaceProduct, products: MarketplaceProduct[]) {
+  const others = products.filter((item) => item.id !== product.id);
+  const sameCategory = others.filter((item) =>
+    product.category_id ? item.category_id === product.category_id : Boolean(product.category) && item.category === product.category);
+  const sameShop = others.filter((item) => item.shop_id === product.shop_id && !sameCategory.includes(item));
+  return [...sameCategory, ...sameShop].slice(0, RELATED_LIMIT);
+}
 
 export function ProductDetailPage({ productId }: { productId: string }) {
   const dispatch = useAppDispatch();
   const bagItems = useBagItems();
   const [product, setProduct] = useState<MarketplaceProduct | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
@@ -26,6 +39,9 @@ export function ProductDetailPage({ productId }: { productId: string }) {
 
       const foundProduct = data.products.find((item) => item.id === productId) ?? null;
       setProduct(foundProduct);
+      setRelatedProducts(foundProduct ? pickRelatedProducts(foundProduct, data.products) : []);
+      // Opening a related product reuses this page, so start again from its first image.
+      setActiveImage(0);
       setSelectedVariants(
         Object.fromEntries(
           (foundProduct?.variant_options ?? [])
@@ -197,6 +213,12 @@ export function ProductDetailPage({ productId }: { productId: string }) {
           </div>
         </section>
       </div>
+
+      <RelatedProducts
+        key={product.id}
+        products={relatedProducts}
+        subtitle={`More from ${product.category && product.category !== "Other" ? product.category : "this shop and similar listings"}.`}
+      />
 
       {isZoomOpen && image ? (
         <button type="button" className="zoomlayer open" onClick={() => setIsZoomOpen(false)} aria-label="Close zoomed image">

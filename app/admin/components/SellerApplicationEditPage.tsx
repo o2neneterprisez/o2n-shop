@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,7 @@ type ApplicationRecord = SellerApplication & {
   owner_id: string;
   latitude: number | null;
   longitude: number | null;
+  logo_url: string | null;
 };
 
 function editableFields(application: ApplicationRecord): EditableApplication {
@@ -71,7 +73,7 @@ export function SellerApplicationEditPage({ applicationId }: { applicationId: st
     setError(null);
     const { data, error: queryError } = await supabase
       .from("seller_applications")
-      .select("id,owner_id,business_name,contact_name,email,phone,address,district,state,notes,status,created_at,latitude,longitude")
+      .select("id,owner_id,business_name,contact_name,email,phone,address,district,state,notes,status,created_at,latitude,longitude,logo_url")
       .eq("id", applicationId)
       .maybeSingle();
     if (queryError) {
@@ -220,6 +222,14 @@ export function SellerApplicationEditPage({ applicationId }: { applicationId: st
                 <h3>Business details</h3>
                 <p>Submitted {formatDate(application.created_at)} · <StatusBadge status={application.status} /></p>
               </div>
+              <div className={confirmationStyles.logoRow}>
+                <span className={confirmationStyles.logo}>
+                  {application.logo_url
+                    ? <Image alt={`${application.business_name} logo`} height={72} src={application.logo_url} unoptimized width={72} />
+                    : application.business_name.slice(0, 1).toUpperCase()}
+                </span>
+                <span>{application.logo_url ? "Shop logo uploaded by the applicant. It will be used for the shop when you approve." : "No shop logo was uploaded."}</span>
+              </div>
               <div className={styles.productFormGrid}>
                 <label className={styles.formField}>Business / shop name
                   <input required maxLength={120} minLength={2} onChange={(event) => updateField("business_name", event.target.value)} readOnly={!editable} value={fields.business_name} />
@@ -313,6 +323,7 @@ export function SellerApplicationEditPage({ applicationId }: { applicationId: st
               <div><dt>Longitude</dt><dd>{fields.longitude || "—"}</dd></div>
               <div><dt>Submitted</dt><dd>{formatDate(application.created_at)}</dd></div>
               <div><dt>Current status</dt><dd>{application.status}</dd></div>
+              <div><dt>Shop logo</dt><dd>{application.logo_url ? "Uploaded" : "—"}</dd></div>
               <div className={confirmationStyles.wide}><dt>Seller account ID</dt><dd>{application.owner_id}</dd></div>
             </dl>
             {error ? <p className={styles.formError} role="alert">{error}</p> : null}

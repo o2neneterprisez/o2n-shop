@@ -5,15 +5,16 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { increaseBagLine, removeBagItem, removeBagProduct } from "@/lib/marketplace/cart";
 import { useBagItems } from "@/lib/marketplace/useBagItems";
-import { useAppDispatch } from "@/lib/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { getMarketplaceData, type MarketplaceProduct } from "@/lib/supabase/api";
 import { MarketplaceHeader } from "@/components/marketplace/MarketplaceHeader";
 
 export function CartPage() {
   const dispatch = useAppDispatch();
   const bagItems = useBagItems();
+  const bagRestored = useAppSelector((state) => state.cart.restored);
   const [products, setProducts] = useState<MarketplaceProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export function CartPage() {
         }
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setProductsLoading(false);
       });
     return () => {
       cancelled = true;
@@ -53,6 +54,7 @@ export function CartPage() {
     }),
     [bagItems, products],
   );
+  const loading = productsLoading || !bagRestored;
   const itemCount = bagProducts.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = bagProducts.reduce((sum, item) => sum + (item.product ? item.price * item.quantity : 0), 0);
 

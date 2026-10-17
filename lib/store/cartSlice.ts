@@ -26,10 +26,52 @@ export function bagLineKey({ productId, variantId, options }: BagSelection) {
     : productId;
 }
 
+function isOptions(value: unknown): value is Record<string, string> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value) &&
+    Object.values(value as Record<string, unknown>).every((option) => typeof option === "string");
+}
+
+/** Reads a saved bag, dropping anything malformed. Older saves stored `{ productId: quantity }`. */
+export function parseSavedBag(raw: string | null): BagItems {
+  if (!raw) return {};
+  let saved: unknown;
+  try {
+    saved = JSON.parse(raw);
+  } catch {
+    return {};
+  }
+  if (!saved || typeof saved !== "object" || Array.isArray(saved)) return {};
+
+  const items: BagItems = {};
+  for (const [key, value] of Object.entries(saved as Record<string, unknown>)) {
+    if (typeof value === "number") {
+      if (Number.isInteger(value) && value > 0) items[key] = { productId: key, variantId: null, options: {}, quantity: value };
+      continue;
+    }
+    if (!value || typeof value !== "object") continue;
+    const line = value as Partial<BagLine>;
+    if (typeof line.productId !== "string" || !Number.isInteger(line.quantity) || (line.quantity ?? 0) < 1) continue;
+    const variantId = typeof line.variantId === "string" ? line.variantId : null;
+    const options = isOptions(line.options) ? line.options : {};
+    items[bagLineKey({ productId: line.productId, variantId, options })] = {
+      productId: line.productId,
+      variantId,
+      options,
+      quantity: Math.min(line.quantity as number, 100),
+    };
+  }
+  return items;
+}
+
 const cartSlice = createSlice({
   name: "cart",
-  initialState: { items: {} as BagItems },
+  // `restored` stays false until the saved bag has been read in the browser.
+  initialState: { items: {} as BagItems, restored: false },
   reducers: {
+    restoreBag(state, action: PayloadAction<BagItems>) {
+      state.items = action.payload;
+      state.restored = true;
+    },
     addBagItem(state, action: PayloadAction<BagSelection>) {
       const key = bagLineKey(action.payload);
       const line = state.items[key];
@@ -60,5 +102,5 @@ const cartSlice = createSlice({
   },
 });
 
-export const { addBagItem, increaseBagLine, removeBagItem, removeBagProduct } = cartSlice.actions;
+export const { addBagItem, increaseBagLine, removeBagItem, removeBagProduct, restoreBag } = cartSlice.actions;
 export default cartSlice.reducer;

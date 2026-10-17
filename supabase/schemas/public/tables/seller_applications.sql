@@ -16,6 +16,8 @@ CREATE TABLE "public"."seller_applications" (
   "latitude"            double precision,
   "longitude"           double precision,
   "created_by_staff_id" uuid,
+  "logo_url"            text,
+  CONSTRAINT "seller_applications_logo_url_check" CHECK (((logo_url IS NULL) OR (char_length(logo_url) <= 1000))),
   CONSTRAINT "seller_applications_business_name_check" CHECK (((length(TRIM(BOTH FROM business_name)) >= 2) AND (length(TRIM(BOTH FROM business_name)) <= 120))),
   CONSTRAINT "seller_applications_created_by_staff_id_fkey" FOREIGN KEY (created_by_staff_id) REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT "seller_applications_latitude_range" CHECK (((latitude IS NULL) OR ((latitude >= ('-90'::integer)::double precision) AND (latitude <= (90)::double precision)))),

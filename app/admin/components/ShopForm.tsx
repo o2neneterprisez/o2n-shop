@@ -87,15 +87,21 @@ export function ShopForm({
           return;
         }
         try {
-          const [sellerResult, authResult, shopResult] = await Promise.all([
+          const [sellerResult, authResult, shopResult, ownedShopsResult] = await Promise.all([
             supabase.from("profiles").select("id,display_name,email").eq("role", "seller").order("display_name"),
             supabase.auth.getUser(),
             shopId
               ? supabase.from("shops").select("id,owner_id,name,slug,description,contact_email,phone,address,district,state,logo_url,latitude,longitude,status").eq("id", shopId).maybeSingle()
               : Promise.resolve({ data: null, error: null }),
+            // New shops can only go to sellers who don't own a shop yet.
+            shopId
+              ? Promise.resolve({ data: [] as { owner_id: string }[], error: null })
+              : supabase.from("shops").select("owner_id"),
           ]);
           if (sellerResult.error) throw new Error(`Unable to load sellers: ${sellerResult.error.message}`);
-          const loadedSellers = (sellerResult.data ?? []) as SellerOption[];
+          if (ownedShopsResult.error) throw new Error(`Unable to check which sellers already have a shop: ${ownedShopsResult.error.message}`);
+          const sellersWithShops = new Set((ownedShopsResult.data ?? []).map((shop) => shop.owner_id));
+          const loadedSellers = ((sellerResult.data ?? []) as SellerOption[]).filter((seller) => !sellersWithShops.has(seller.id));
           setSellers(loadedSellers);
           if (authResult.error) {
             const message = authResult.error.message === "Auth session missing!"
@@ -293,7 +299,7 @@ export function ShopForm({
               <span className={styles.fieldLabel} id="shop-owner-label">Shop owner (required)</span>
               <SellerPicker disabled={loading} labelledBy="shop-owner-label" onChange={setOwnerId} sellers={sellers} value={ownerId} />
               {!editing && !loading && !sellers.length
-                ? <span>No seller accounts are available yet. Add one on the Sellers page first.</span>
+                ? <span>Every seller already has a shop. Add a new seller on the Sellers page first.</span>
                 : null}
             </div>
             <label className={styles.formField}>URL slug
